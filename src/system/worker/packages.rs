@@ -35,16 +35,28 @@ impl super::Worker {
             )));
         }
         let mut args = vec!["-S", "--needed", "--noconfirm"];
-        for m in &missing { args.push(m); }
+        for m in &missing {
+            args.push(m);
+        }
         tracing::info!(cmd = %format!("pacman {}", args.join(" ")), "exec");
         let status = std::process::Command::new("pacman").args(&args).status()?;
         let _ = audit_event_fields(
             "worker",
             "ensure_aur_preflight",
             if status.success() { "ok" } else { "error" },
-            &AuditFields { cmd: Some(format!("pacman {}", args.join(" "))), rc: status.code(), ..Default::default() },
+            &AuditFields {
+                cmd: Some(format!("pacman {}", args.join(" "))),
+                rc: status.code(),
+                ..Default::default()
+            },
         );
-        if status.success() { Ok(()) } else { Err(Error::ExecutionFailed("failed to install AUR prerequisites".into())) }
+        if status.success() {
+            Ok(())
+        } else {
+            Err(Error::ExecutionFailed(
+                "failed to install AUR prerequisites".into(),
+            ))
+        }
     }
 
     /// Check if a package exists in official repos (pacman -Si)
@@ -93,7 +105,11 @@ impl super::Worker {
             "worker",
             "update_packages",
             if status.success() { "ok" } else { "error" },
-            &AuditFields { cmd: Some(format!("pacman {}", args.join(" "))), rc: status.code(), ..Default::default() },
+            &AuditFields {
+                cmd: Some(format!("pacman {}", args.join(" "))),
+                rc: status.code(),
+                ..Default::default()
+            },
         );
 
         if status.success() {
@@ -113,8 +129,16 @@ impl super::Worker {
         let _ = audit_event_fields(
             "worker",
             "check_installed",
-            if status.success() { "present" } else { "absent" },
-            &AuditFields { cmd: Some(format!("pacman -Qi {}", package)), rc: status.code(), ..Default::default() },
+            if status.success() {
+                "present"
+            } else {
+                "absent"
+            },
+            &AuditFields {
+                cmd: Some(format!("pacman -Qi {}", package)),
+                rc: status.code(),
+                ..Default::default()
+            },
         );
         Ok(status.success())
     }
@@ -129,7 +153,11 @@ impl super::Worker {
         }
 
         if self.dry_run {
-            tracing::info!("[dry-run] pacman -S {} {}", if assume_yes { "--noconfirm" } else { "" }, package);
+            tracing::info!(
+                "[dry-run] pacman -S {} {}",
+                if assume_yes { "--noconfirm" } else { "" },
+                package
+            );
             return Ok(());
         }
 
@@ -153,7 +181,9 @@ impl super::Worker {
                 args.push("--noconfirm");
             }
             // For normal installs, using --needed avoids reinstall; when reinstall requested, omit it
-            if !reinstall { args.push("--needed"); }
+            if !reinstall {
+                args.push("--needed");
+            }
             args.push(package);
 
             tracing::debug!(cmd = %format!("pacman {}", args.join(" ")), "exec");
@@ -164,8 +194,16 @@ impl super::Worker {
             let _ = audit_event_fields(
                 "worker",
                 "install_package.pacman",
-                if pacman_status.success() { "ok" } else { "failed_or_unavailable" },
-                &AuditFields { cmd: Some(format!("pacman {}", args.join(" "))), rc: pacman_status.code(), ..Default::default() },
+                if pacman_status.success() {
+                    "ok"
+                } else {
+                    "failed_or_unavailable"
+                },
+                &AuditFields {
+                    cmd: Some(format!("pacman {}", args.join(" "))),
+                    rc: pacman_status.code(),
+                    ..Default::default()
+                },
             );
 
             if pacman_status_ok && self.check_installed(package)? {
@@ -178,7 +216,10 @@ impl super::Worker {
                 "worker",
                 "install_package.pacman",
                 "skipped_official_absent",
-                &AuditFields { cmd: Some(format!("pacman -Si {}", package)), ..Default::default() },
+                &AuditFields {
+                    cmd: Some(format!("pacman -Si {}", package)),
+                    ..Default::default()
+                },
             );
         }
 
@@ -233,7 +274,11 @@ impl super::Worker {
                     "worker",
                     "install_package.aur",
                     if aur_status.success() { "ok" } else { "error" },
-                    &AuditFields { cmd: Some(format!("{} -S --needed {}", h, package)), rc: aur_status.code(), ..Default::default() },
+                    &AuditFields {
+                        cmd: Some(format!("{} -S --needed {}", h, package)),
+                        rc: aur_status.code(),
+                        ..Default::default()
+                    },
                 );
 
                 if aur_status.success() && self.check_installed(package)? {
@@ -302,7 +347,11 @@ impl super::Worker {
             "worker",
             "remove_package",
             if status.success() { "ok" } else { "error" },
-            &AuditFields { cmd: Some(format!("pacman {}", args.join(" "))), rc: status.code(), ..Default::default() },
+            &AuditFields {
+                cmd: Some(format!("pacman {}", args.join(" "))),
+                rc: status.code(),
+                ..Default::default()
+            },
         );
 
         if status.success() {
@@ -374,8 +423,16 @@ impl super::Worker {
                 let _ = audit_event_fields(
                     "worker",
                     "query_file_owner",
-                    if o.status.success() { "owned" } else { "unowned" },
-                    &AuditFields { cmd: Some(format!("pacman -Qo {}", spath)), rc: o.status.code(), ..Default::default() },
+                    if o.status.success() {
+                        "owned"
+                    } else {
+                        "unowned"
+                    },
+                    &AuditFields {
+                        cmd: Some(format!("pacman -Qo {}", spath)),
+                        rc: o.status.code(),
+                        ..Default::default()
+                    },
                 );
                 if o.status.success() {
                     // Example: /usr/bin/ls is owned by coreutils 9.4-2

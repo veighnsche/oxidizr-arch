@@ -6,7 +6,9 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 #[cfg(feature = "switchyard")]
-use switchyard::{ApplyMode, FactsEmitter, AuditSink, LinkRequest, PlanInput, Policy, RestoreRequest, Switchyard};
+use switchyard::{
+    ApplyMode, AuditSink, FactsEmitter, LinkRequest, PlanInput, Policy, RestoreRequest, Switchyard,
+};
 
 #[cfg(feature = "switchyard")]
 struct NullFacts;
@@ -126,17 +128,30 @@ where
     let mut input = PlanInput::default();
     for (filename, src) in applets.iter() {
         let target = resolve(filename);
-        input.link.push(LinkRequest { source: src.clone(), target });
+        input.link.push(LinkRequest {
+            source: src.clone(),
+            target,
+        });
     }
     let plan = sx.plan(input);
     let pre = sx.preflight(&plan);
     if !pre.ok {
-        return Err(Error::ExecutionFailed(format!("preflight failed: {}", pre.stops.join(", "))));
+        return Err(Error::ExecutionFailed(format!(
+            "preflight failed: {}",
+            pre.stops.join(", ")
+        )));
     }
-    let mode = if worker.dry_run { ApplyMode::DryRun } else { ApplyMode::Commit };
+    let mode = if worker.dry_run {
+        ApplyMode::DryRun
+    } else {
+        ApplyMode::Commit
+    };
     let rep = sx.apply(&plan, mode);
     if !rep.errors.is_empty() {
-        return Err(Error::ExecutionFailed(format!("apply errors: {}", rep.errors.join(", "))));
+        return Err(Error::ExecutionFailed(format!(
+            "apply errors: {}",
+            rep.errors.join(", ")
+        )));
     }
     Ok(())
 }
@@ -169,7 +184,10 @@ pub fn restore_targets(worker: &Worker, targets: &[PathBuf]) -> Result<()> {
             "symlink",
             "restore_started",
             "begin",
-            &AuditFields { target: Some(target.display().to_string()), ..Default::default() },
+            &AuditFields {
+                target: Some(target.display().to_string()),
+                ..Default::default()
+            },
         );
         // Emit host progress protocol line for v1 host bar
         if let Some(name) = target.file_name().and_then(|s| s.to_str()) {
@@ -194,7 +212,11 @@ pub fn restore_targets(worker: &Worker, targets: &[PathBuf]) -> Result<()> {
             "symlink",
             "restore_done",
             "success",
-            &AuditFields { target: Some(target.display().to_string()), duration_ms: Some(elapsed_ms), ..Default::default() },
+            &AuditFields {
+                target: Some(target.display().to_string()),
+                duration_ms: Some(elapsed_ms),
+                ..Default::default()
+            },
         );
         // Update progress after a successful restore
         if let Some(name) = target.file_name().and_then(|s| s.to_str()) {
@@ -224,12 +246,22 @@ fn restore_targets_via_switchyard(worker: &Worker, targets: &[PathBuf]) -> Resul
     let plan = sx.plan(input);
     let pre = sx.preflight(&plan);
     if !pre.ok {
-        return Err(Error::ExecutionFailed(format!("preflight failed: {}", pre.stops.join(", "))));
+        return Err(Error::ExecutionFailed(format!(
+            "preflight failed: {}",
+            pre.stops.join(", ")
+        )));
     }
-    let mode = if worker.dry_run { ApplyMode::DryRun } else { ApplyMode::Commit };
+    let mode = if worker.dry_run {
+        ApplyMode::DryRun
+    } else {
+        ApplyMode::Commit
+    };
     let rep = sx.apply(&plan, mode);
     if !rep.errors.is_empty() {
-        return Err(Error::ExecutionFailed(format!("apply errors: {}", rep.errors.join(", "))));
+        return Err(Error::ExecutionFailed(format!(
+            "apply errors: {}",
+            rep.errors.join(", ")
+        )));
     }
     Ok(())
 }

@@ -2,11 +2,11 @@ use crate::checks::{is_supported_distro, Distribution};
 use crate::error::{Error, Result};
 use crate::experiments::util::{resolve_usrbin, restore_targets, verify_removed};
 use crate::experiments::{check_download_prerequisites, SUDO_RS};
-use crate::system::Worker;
 use crate::state;
+use crate::system::Worker;
+use crate::ui::progress;
 use std::fs;
 use std::os::unix::fs::MetadataExt;
-use crate::ui::progress;
 use std::path::PathBuf;
 
 pub struct SudoRsExperiment {
@@ -318,12 +318,14 @@ impl SudoRsExperiment {
         ] {
             // Follow alias to real binary
             let alias = PathBuf::from(format!("/usr/bin/{}.sudo-rs", name));
-            let real = fs::canonicalize(&alias).map_err(|e| Error::ExecutionFailed(format!(
-                "failed to resolve real binary for {} via {}: {}",
-                name,
-                alias.display(),
-                e
-            )))?;
+            let real = fs::canonicalize(&alias).map_err(|e| {
+                Error::ExecutionFailed(format!(
+                    "failed to resolve real binary for {} via {}: {}",
+                    name,
+                    alias.display(),
+                    e
+                ))
+            })?;
             let meta = fs::metadata(&real)?;
             if meta.uid() != 0 || meta.gid() != 0 || (meta.mode() & 0o4000) == 0 {
                 return Err(Error::ExecutionFailed(format!(
@@ -344,14 +346,18 @@ impl SudoRsExperiment {
             let status = std::process::Command::new("sudo")
                 .args(["-n", "-u", user, "true"])
                 .status()
-                .map_err(|e| Error::ExecutionFailed(format!("failed to run sudo smoke test: {}", e)))?;
+                .map_err(|e| {
+                    Error::ExecutionFailed(format!("failed to run sudo smoke test: {}", e))
+                })?;
             if !status.success() {
                 return Err(Error::ExecutionFailed(
                     "sudo -n true smoke test failed for configured user".into(),
                 ));
             }
         } else {
-            tracing::warn!("sudo-rs: skipping sudo smoke test; provide --sudo-smoke-user to enable");
+            tracing::warn!(
+                "sudo-rs: skipping sudo smoke test; provide --sudo-smoke-user to enable"
+            );
         }
         Ok(())
     }

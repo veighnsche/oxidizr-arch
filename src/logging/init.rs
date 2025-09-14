@@ -2,7 +2,10 @@ use std::fmt as StdFmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::{Once, atomic::{AtomicBool, Ordering}};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Once,
+};
 
 use tracing::{Event, Level};
 use tracing_log::LogTracer;
@@ -65,7 +68,9 @@ pub fn init_logging() {
             .with_level(false)
             .with_target(false)
             .with_writer(AuditMakeWriter::new(PathBuf::from(AUDIT_LOG_PATH)))
-            .with_filter(FilterFn::new(move |meta| !dry_run && meta.target() == "audit"));
+            .with_filter(FilterFn::new(move |meta| {
+                !dry_run && meta.target() == "audit"
+            }));
         let subscriber = Registry::default().with(human_layer).with(audit_layer);
 
         // Install the composed subscriber

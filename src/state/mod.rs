@@ -47,19 +47,31 @@ pub fn save_state(state_dir: Option<&Path>, mut st: State, dry_run: bool) -> Res
         "state",
         "save",
         "success",
-        &AuditFields { artifacts: Some(vec![path.display().to_string()]), ..Default::default() },
+        &AuditFields {
+            artifacts: Some(vec![path.display().to_string()]),
+            ..Default::default()
+        },
     );
     Ok(())
 }
 
-pub fn write_state_report(state_dir: Option<&Path>, log_dir_override: Option<&Path>) -> Result<PathBuf> {
+pub fn write_state_report(
+    state_dir: Option<&Path>,
+    log_dir_override: Option<&Path>,
+) -> Result<PathBuf> {
     let st = load_state(state_dir);
     let log_dir = log_dir_override
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from(DEFAULT_LOG_DIR));
     let report = log_dir.join("oxidizr-arch/state-report.txt");
-    if let Some(parent) = report.parent() { fs::create_dir_all(parent).ok(); }
-    let mut f = fs::OpenOptions::new().create(true).truncate(true).write(true).open(&report)?;
+    if let Some(parent) = report.parent() {
+        fs::create_dir_all(parent).ok();
+    }
+    let mut f = fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(&report)?;
     writeln!(f, "State at {}", st.timestamp).ok();
     for t in &st.managed_targets {
         let path = Path::new(t);
@@ -80,12 +92,21 @@ pub fn write_state_report(state_dir: Option<&Path>, log_dir_override: Option<&Pa
         "state",
         "report",
         "success",
-        &AuditFields { artifacts: Some(vec![report.display().to_string()]), ..Default::default() },
+        &AuditFields {
+            artifacts: Some(vec![report.display().to_string()]),
+            ..Default::default()
+        },
     );
     Ok(report)
 }
 
-pub fn set_enabled(state_dir: Option<&Path>, dry_run: bool, name: &str, enabled: bool, managed: &[PathBuf]) -> Result<State> {
+pub fn set_enabled(
+    state_dir: Option<&Path>,
+    dry_run: bool,
+    name: &str,
+    enabled: bool,
+    managed: &[PathBuf],
+) -> Result<State> {
     let mut st = load_state(state_dir);
     if enabled {
         if !st.enabled_experiments.iter().any(|n| n == name) {

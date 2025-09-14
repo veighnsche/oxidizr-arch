@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "oxidizr-arch CLI"
 license = "Apache-2.0 OR MIT"
+repository = "https://github.com/veighnsche/oxidizr-arch"
+readme = "src/README.md"
+keywords = ["cli", "arch", "switchyard"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }

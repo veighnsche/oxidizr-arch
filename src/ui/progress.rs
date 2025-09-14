@@ -63,11 +63,10 @@ pub fn new_bar(len: u64) -> Option<ProgressBar> {
     };
 
     let pb = ProgressBar::with_draw_target(Some(len), draw);
-    let style = ProgressStyle::with_template(
-        "{spinner:.green} [{wide_bar:.cyan/blue}] {pos}/{len} {msg}",
-    )
-    .unwrap_or_else(|_| ProgressStyle::default_bar())
-    .progress_chars("#>-");
+    let style =
+        ProgressStyle::with_template("{spinner:.green} [{wide_bar:.cyan/blue}] {pos}/{len} {msg}")
+            .unwrap_or_else(|_| ProgressStyle::default_bar())
+            .progress_chars("#>-");
     pb.set_style(style);
     Some(pb)
 }

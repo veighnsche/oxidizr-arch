@@ -36,7 +36,7 @@ pub enum Error {
     RepoGateFailed { package: String, details: String },
 
     /// Pacman database lock timeout reached
-    #[error("pacman DB lock timeout at /var/lib/pacman/db.lck")] 
+    #[error("pacman DB lock timeout at /var/lib/pacman/db.lck")]
     PacmanLockTimeout,
 
     /// Operation requires root privileges

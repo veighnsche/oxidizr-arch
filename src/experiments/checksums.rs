@@ -5,9 +5,9 @@ use crate::experiments::util::{
     create_symlinks, log_applets_summary, resolve_usrbin, restore_targets,
 };
 use crate::experiments::{check_download_prerequisites, UUTILS_COREUTILS};
-use crate::system::Worker;
-use crate::state;
 use crate::logging::{audit_event_fields, AuditFields};
+use crate::state;
+use crate::system::Worker;
 use std::path::PathBuf;
 
 pub struct ChecksumsExperiment {
@@ -90,10 +90,7 @@ impl ChecksumsExperiment {
         log_applets_summary("checksums", &links, 8);
         create_symlinks(worker, &links, |name| self.resolve_target(name))?;
         // Persist state: mark enabled and record managed checksum targets
-        let managed: Vec<PathBuf> = links
-            .iter()
-            .map(|(n, _)| self.resolve_target(n))
-            .collect();
+        let managed: Vec<PathBuf> = links.iter().map(|(n, _)| self.resolve_target(n)).collect();
         let _ = state::set_enabled(
             worker.state_dir_override.as_deref(),
             worker.dry_run,

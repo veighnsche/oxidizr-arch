@@ -50,7 +50,11 @@ impl super::Worker {
                     "worker",
                     "extra_repo_available.repo_list",
                     if found { "detected" } else { "not_detected" },
-                    &AuditFields { cmd: Some("pacman-conf --repo-list".to_string()), rc: out.status.code(), ..Default::default() },
+                    &AuditFields {
+                        cmd: Some("pacman-conf --repo-list".to_string()),
+                        rc: out.status.code(),
+                        ..Default::default()
+                    },
                 );
                 if found {
                     return Ok(true);
@@ -73,8 +77,16 @@ impl super::Worker {
             let _ = audit_event_fields(
                 "worker",
                 "extra_repo_available.pacman_sl",
-                if status.success() { "detected" } else { "not_detected" },
-                &AuditFields { cmd: Some("pacman -Sl extra".to_string()), rc: status.code(), ..Default::default() },
+                if status.success() {
+                    "detected"
+                } else {
+                    "not_detected"
+                },
+                &AuditFields {
+                    cmd: Some("pacman -Sl extra".to_string()),
+                    rc: status.code(),
+                    ..Default::default()
+                },
             );
             if status.success() {
                 return Ok(true);
@@ -99,7 +111,11 @@ impl super::Worker {
                     "worker",
                     "extra_repo_available.conf_dump",
                     if found { "detected" } else { "not_detected" },
-                    &AuditFields { cmd: Some("pacman-conf -l".to_string()), rc: out.status.code(), ..Default::default() },
+                    &AuditFields {
+                        cmd: Some("pacman-conf -l".to_string()),
+                        rc: out.status.code(),
+                        ..Default::default()
+                    },
                 );
                 if found {
                     return Ok(true);
@@ -114,7 +130,10 @@ impl super::Worker {
             "worker",
             "extra_repo_available.file_fallback",
             if found { "detected" } else { "not_detected" },
-            &AuditFields { cmd: Some("/etc/pacman.conf".to_string()), ..Default::default() },
+            &AuditFields {
+                cmd: Some("/etc/pacman.conf".to_string()),
+                ..Default::default()
+            },
         );
         Ok(found)
     }

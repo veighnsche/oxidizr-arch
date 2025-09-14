@@ -5,8 +5,8 @@ use crate::experiments::util::{
     create_symlinks, log_applets_summary, resolve_usrbin, restore_targets, verify_removed,
 };
 use crate::experiments::{check_download_prerequisites, UUTILS_COREUTILS};
-use crate::system::Worker;
 use crate::state;
+use crate::system::Worker;
 use std::path::PathBuf;
 
 // Coreutils bins list (moved under assets per DELTA)

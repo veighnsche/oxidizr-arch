@@ -3,10 +3,10 @@ pub mod cli;
 pub mod error;
 pub mod experiments;
 pub mod logging;
+pub mod state;
 pub mod symlink;
 pub mod system;
 pub mod ui;
-pub mod state;
 
 pub use error::{Error, Result};
 

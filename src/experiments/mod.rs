@@ -183,7 +183,10 @@ pub fn check_download_prerequisites(
                     "experiments",
                     "repo_gate_failed",
                     "extra_missing",
-                    &AuditFields { target: Some(package.to_string()), ..Default::default() },
+                    &AuditFields {
+                        target: Some(package.to_string()),
+                        ..Default::default()
+                    },
                 );
                 return Err(Error::RepoGateFailed {
                     package: package.into(),
@@ -204,7 +207,10 @@ pub fn check_download_prerequisites(
                         "experiments",
                         "repo_gate_failed",
                         "package_absent",
-                        &AuditFields { target: Some(package.to_string()), ..Default::default() },
+                        &AuditFields {
+                            target: Some(package.to_string()),
+                            ..Default::default()
+                        },
                     );
                     return Err(Error::RepoGateFailed {
                         package: package.into(),
@@ -223,7 +229,10 @@ pub fn check_download_prerequisites(
                     "experiments",
                     "repo_gate_failed",
                     "aur_helper_missing",
-                    &AuditFields { target: Some(package.to_string()), ..Default::default() },
+                    &AuditFields {
+                        target: Some(package.to_string()),
+                        ..Default::default()
+                    },
                 );
                 return Err(Error::RepoGateFailed {
                     package: package.into(),
@@ -261,8 +270,15 @@ pub fn check_download_prerequisites(
         let _ = audit_event_fields(
             "experiments",
             "already_installed",
-            if reuse { "reuse" } else { "reinstall_requested" },
-            &AuditFields { target: Some(package.to_string()), ..Default::default() },
+            if reuse {
+                "reuse"
+            } else {
+                "reinstall_requested"
+            },
+            &AuditFields {
+                target: Some(package.to_string()),
+                ..Default::default()
+            },
         );
 
         if reuse {

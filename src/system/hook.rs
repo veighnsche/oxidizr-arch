@@ -25,17 +25,18 @@ pub fn install_pacman_hook() -> Result<PathBuf> {
     let dir = Path::new(HOOK_DIR);
     let path = dir.join(HOOK_NAME);
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| crate::Error::HookInstallError(e.to_string()))?;
+        fs::create_dir_all(parent).map_err(|e| crate::Error::HookInstallError(e.to_string()))?;
     }
     let body = hook_body();
-    fs::write(&path, body.as_bytes())
-        .map_err(|e| crate::Error::HookInstallError(e.to_string()))?;
+    fs::write(&path, body.as_bytes()).map_err(|e| crate::Error::HookInstallError(e.to_string()))?;
     let _ = audit_event_fields(
         "hook",
         "install_pacman_hook",
         "success",
-        &AuditFields { artifacts: Some(vec![path.display().to_string()]), ..Default::default() },
+        &AuditFields {
+            artifacts: Some(vec![path.display().to_string()]),
+            ..Default::default()
+        },
     );
     Ok(path)
 }

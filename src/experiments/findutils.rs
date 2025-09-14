@@ -4,9 +4,9 @@ use crate::experiments::util::{
     create_symlinks, log_applets_summary, resolve_usrbin, restore_targets, verify_removed,
 };
 use crate::experiments::{check_download_prerequisites, UUTILS_FINDUTILS};
-use crate::system::Worker;
-use crate::state;
 use crate::logging::{audit_event_fields, AuditFields};
+use crate::state;
+use crate::system::Worker;
 use std::path::PathBuf;
 
 pub struct FindutilsExperiment {
