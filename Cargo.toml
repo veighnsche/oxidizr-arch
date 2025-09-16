@@ -1,0 +1,40 @@
+[package]
+name = "oxidizr-arch"
+version = "0.1.0"
+edition = "2021"
+description = "Arch Linux CLI to swap GNU coreutils/findutils with uutils and sudo with sudo-rs using Switchyard."
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/veighnsche/oxidizr-arch"
+keywords = ["cli", "archlinux", "switchyard", "uutils", "sudo-rs"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+switchyard = { package = "switchyard-fs", path = "../switchyard" }
+oxidizr-cli-core = { path = "../oxidizr-cli-core" }
+clap_complete = "4.5"
+atty = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+fs2 = "0.4"
+which = "4"
+
+[features]
+default = []
+bdd = []
+
+[dev-dependencies]
+async-trait = "0.1"
+cucumber = { version = "0.20", features = ["macros"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tempfile = "3.10"
+assert_cmd = "2.0"
+predicates = "3.1"
+shlex = "1.2"
+regex = "1"
+
+[[test]]
+name = "bdd"
+path = "tests/bdd_main.rs"
+harness = false
+required-features = ["bdd"]
