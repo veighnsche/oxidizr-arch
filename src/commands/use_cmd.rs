@@ -1,3 +1,6 @@
+/// FILE TOO LARGE
+/// MODULARIZE NEXT REFACTOR
+
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::PermissionsExt;
 use std::process::{Command, Stdio};
@@ -33,6 +36,63 @@ pub fn exec(
         }
     }
 
+fn pacman_query_applet(pkg: Package, applet: &str) -> Option<PathBuf> {
+    let pkg_name = match pkg {
+        Package::Coreutils => "uutils-coreutils",
+        Package::Findutils => "uutils-findutils-bin",
+        Package::Sudo => return None,
+    };
+    let out = Command::new("pacman")
+        .args(["-Ql", pkg_name])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let needle = format!("/uu-{}", applet);
+    let s = String::from_utf8_lossy(&out.stdout);
+    for line in s.lines() {
+        if let Some(path) = line.split_whitespace().nth(1) {
+            if path.ends_with(&needle) {
+                let p = PathBuf::from(path);
+                if p.exists() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn resolve_applet_source(pkg: Package, base: &Path, applet: &str) -> PathBuf {
+    // 1) Try pacman -Ql to locate /uu-<applet> provided by replacement package
+    if let Some(p) = pacman_query_applet(pkg, applet) {
+        return p;
+    }
+    // 2) Common locations for uu-* per-applet binaries
+    let candidates: &[&str] = match pkg {
+        Package::Coreutils => &[
+            "/usr/bin/uu-",                 // will be appended with applet
+            "/usr/lib/uutils-coreutils/uu-",
+        ],
+        Package::Findutils => &[
+            "/usr/bin/uu-",
+            "/usr/lib/uutils-findutils/uu-",
+        ],
+        Package::Sudo => &[],
+    };
+    for prefix in candidates {
+        let p = PathBuf::from(format!("{}{}", prefix, applet));
+        if p.exists() {
+            return p;
+        }
+    }
+    // 3) Fallback to base dispatcher if we didn't find a per-applet binary
+    base.to_path_buf()
+}
     // Map packages to Arch replacement and distro package names
     let (rs_pkg, _distro_pkg) = match package {
         Package::Coreutils => ("uutils-coreutils", "coreutils"),
@@ -83,10 +143,10 @@ pub fn exec(
                     ok = out.status.success();
                 }
                 if !ok {
-                    // paru -S --noconfirm
+                    // paru -S --noconfirm (as current user)
                     tried.push(format!("paru -S --noconfirm {}", rs_pkg));
                     let paru = which::which("paru").ok();
-                    if let Some(paru_bin) = paru {
+                    if let Some(paru_bin) = paru.clone() {
                         let mut cmd = Command::new(paru_bin);
                         cmd.args(["-S", "--noconfirm", rs_pkg]);
                         cmd.stdin(Stdio::null());
@@ -117,6 +177,39 @@ pub fn exec(
                             "[warn] paru not found; cannot install AUR package {} automatically",
                             rs_pkg
                         );
+                    }
+                }
+                if !ok {
+                    // If running as root and OXI_AUR_HELPER_USER is set, try: sudo -u <user> paru -S
+                    if let Ok(helper_user) = std::env::var("OXI_AUR_HELPER_USER") {
+                        if which::which("sudo").is_ok() && which::which("paru").is_ok() {
+                            let mut cmd = Command::new("sudo");
+                            cmd.args(["-u", &helper_user, "paru", "-S", "--noconfirm", rs_pkg]);
+                            cmd.stdin(Stdio::null());
+                            cmd.stdout(Stdio::piped());
+                            cmd.stderr(Stdio::piped());
+                            tried.push(format!("sudo -u {} paru -S --noconfirm {}", helper_user, rs_pkg));
+                            if let Ok(out) = cmd.output() {
+                                last_code = out.status.code().unwrap_or(1);
+                                last_stderr_tail = String::from_utf8_lossy(&out.stderr)
+                                    .chars()
+                                    .rev()
+                                    .take(400)
+                                    .collect::<String>()
+                                    .chars()
+                                    .rev()
+                                    .collect::<String>();
+                                eprintln!(
+                                    "{}",
+                                    json!({
+                                        "event":"pm.install","pm":{"tool":"sudo -u","user":helper_user,"args":["paru","-S","--noconfirm",rs_pkg],"package":rs_pkg},
+                                        "exit_code": last_code,
+                                        "stderr_tail": last_stderr_tail
+                                    })
+                                );
+                                ok = out.status.success();
+                            }
+                        }
                     }
                 }
                 if !ok {
