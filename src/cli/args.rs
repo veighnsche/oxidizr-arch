@@ -27,6 +27,14 @@ pub struct Cli {
     #[arg(long, global = true, default_value_t = false)]
     pub assume_yes: bool,
 
+    /// Parity threshold to enforce for replacement coverage
+    #[arg(long, global = true, value_enum, default_value_t = ParityLevel::Standard)]
+    pub require_parity: ParityLevel,
+
+    /// Allow missing non-SELinux applets (Use mode only), comma-separated
+    #[arg(long, global = true)]
+    pub allow_missing: Option<String>,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -91,4 +99,16 @@ pub enum Shell {
     Bash,
     Zsh,
     Fish,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, ValueEnum)]
+pub enum ParityLevel {
+    /// Critical Set only; SELinux Set required iff SELinux enabled
+    Standard,
+    /// Critical Set plus all known GNU applets available in the chosen uutils build
+    Strict,
+    /// Enforce presence of SELinux Set regardless of system SELinux status
+    Selinux,
+    /// No parity gate (dangerous; for experts only)
+    None,
 }

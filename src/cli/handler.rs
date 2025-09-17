@@ -51,7 +51,16 @@ pub fn dispatch(cli: Cli) -> Result<(), String> {
                     return Err("aborted by user".to_string());
                 }
             }
-            crate::commands::r#use::exec(&api, &cli.root, package, offline, use_local, apply_mode)
+            crate::commands::r#use::exec(
+                &api,
+                &cli.root,
+                package,
+                offline,
+                use_local,
+                apply_mode,
+                cli.require_parity,
+                cli.allow_missing.clone(),
+            )
         }
         Commands::Restore {
             package,
@@ -82,6 +91,7 @@ pub fn dispatch(cli: Cli) -> Result<(), String> {
             all,
             apply_mode,
             cli.assume_yes,
+            cli.require_parity,
         ),
         Commands::Completions { shell } => crate::cli::completions::emit(shell),
     }
