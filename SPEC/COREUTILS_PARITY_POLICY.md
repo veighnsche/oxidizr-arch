@@ -26,6 +26,7 @@ Covers when the CLI uses uutils applets (via symlink/exec) or replaces GNU coreu
 ## SELinux Detection
 
 The CLI MUST detect SELinux status:
+
 - Treat SELinux as enabled if `/sys/fs/selinux` exists AND `getenforce` returns `Enforcing` or `Permissive`.
 - Otherwise, treat SELinux as disabled.
 
@@ -34,6 +35,7 @@ When SELinux is disabled, the SELinux Set is OPTIONAL for parity. When enabled, 
 ## Provider Detection (Arch specifics)
 
 The CLI MUST detect presence of `uu-chcon`/`uu-runcon` via any of:
+
 - `command -v uu-chcon` / `command -v uu-runcon`, or
 - Package file lists (e.g., `pacman -Ql uutils-coreutils | grep -E 'uu-(chcon|runcon)(\\.1\\.gz)?$'`).
 
@@ -42,6 +44,7 @@ If missing in Arch Extra’s `uutils-coreutils`, the CLI SHOULD suggest a SELinu
 ## User Controls
 
 The CLI MUST support a parity threshold flag:
+
 - `--require-parity=standard|strict|none|selinux`
   - standard (default): Critical Set only; SELinux Set required iff SELinux enabled.
   - strict: Critical Set plus all known GNU applets available in the chosen uutils build.
@@ -58,10 +61,12 @@ The CLI MAY accept `--allow-missing=<applet1,applet2,...>` to override non-SELin
 ## Reporting & Telemetry
 
 After any action, the CLI MUST print:
+
 - A one‑line summary including provider and parity status.
 - A detailed list of skipped or missing applets, and the parity threshold applied.
 
 Examples:
+
 - Active provider: `uutils`
 - Skipped: `chcon`, `runcon` (source_missing in this build; SELinux disabled)
 - Or: Aborted: Replace mode blocked — SELinux enabled but `uu-chcon`/`uu-runcon` missing.
@@ -81,6 +86,7 @@ Examples:
 ## Example Logs
 
 Use mode on Arch (SELinux disabled):
+
 ```
 {"event":"use.exec.skip_applet","applet":"chcon","reason":"source_missing","source":"/usr/bin/uu-chcon"}
 {"event":"use.exec.skip_applet","applet":"runcon","reason":"source_missing","source":"/usr/bin/uu-runcon"}
@@ -88,6 +94,7 @@ Summary: provider=uutils (mixed); skipped=[chcon, runcon]; parity=OK (standard)
 ```
 
 Replace mode with SELinux enabled but missing applets:
+
 ```
 Abort: SELinux detected (Permissive). Missing uu-chcon, uu-runcon.
 Hint: install SELinux-enabled uutils build and retry with --require-parity=selinux|strict
@@ -106,5 +113,5 @@ Hint: install SELinux-enabled uutils build and retry with --require-parity=selin
 - Arch adapter applet enumeration: `cargo/oxidizr-arch/src/adapters/arch_adapter.rs`
 - Coverage and parity checks: `oxidizr-cli-core` (coverage discovery) and Switchyard preflight
 - Proof scripts: `scripts/arch_dev_proof.sh`, `scripts/arch_dev_shell.sh`
-- SELinux feature notes (uutils): https://github.com/uutils/coreutils/wiki/Supporting-SELinux-in-the-coreutils
-- Arch package file list (uutils-coreutils): https://archlinux.org/packages/extra/x86_64/uutils-coreutils/files/
+- SELinux feature notes (uutils): <https://github.com/uutils/coreutils/wiki/Supporting-SELinux-in-the-coreutils>
+- Arch package file list (uutils-coreutils): <https://archlinux.org/packages/extra/x86_64/uutils-coreutils/files/>
