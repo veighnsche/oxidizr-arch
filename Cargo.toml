@@ -7,11 +7,12 @@ license = "Apache-2.0 OR MIT"
 repository = "https://github.com/veighnsche/oxidizr-arch"
 keywords = ["cli", "archlinux", "switchyard", "uutils", "sudo-rs"]
 categories = ["command-line-utilities"]
+readme = "README.md"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-switchyard = { package = "switchyard-fs", path = "../switchyard" }
-oxidizr-cli-core = { path = "../oxidizr-cli-core" }
+switchyard = { package = "switchyard-fs", version = "0.1.0" }
+oxidizr-cli-core = { version = "0.1.0" }
 clap_complete = "4.5"
 atty = "0.2"
 serde = { version = "1.0", features = ["derive"] }
