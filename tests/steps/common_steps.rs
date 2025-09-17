@@ -10,7 +10,9 @@ pub async fn staging_root_at(world: &mut World) {
     world.ensure_dir("/var/lock");
 }
 
-#[given(regex = r#"^a verified replacement artifact lists applets \"([^"]+)\" for package \"(coreutils|findutils|sudo)\"$"#)]
+#[given(
+    regex = r#"^a verified replacement artifact lists applets \"([^"]+)\" for package \"(coreutils|findutils|sudo)\"$"#
+)]
 pub async fn verified_artifact_lists_applets(world: &mut World, applets: String, pkg: String) {
     use std::io::Write as _;
     let rel = match pkg.as_str() {
@@ -20,8 +22,10 @@ pub async fn verified_artifact_lists_applets(world: &mut World, applets: String,
         _ => unreachable!(),
     };
     let abs = world.under_root(&rel);
-    if let Some(parent) = abs.parent() { let _ = std::fs::create_dir_all(parent); }
-    let content = format!("#!/bin/sh\nif [ \"$1\" = \"--list\" ] || [ \"$1\" = \"--help\" ]; then\n  echo {}\n  exit 0\nfi\necho {}\n", shlex::quote(&applets), shlex::quote(&applets));
+    if let Some(parent) = abs.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let content = format!("#!/bin/sh\nif [ \"$1\" = \"--list\" ] || [ \"$1\" = \"--help\" ]; then\n  echo {}\n  exit 0\nfi\necho {}\n", applets, applets);
     {
         let mut f = std::fs::File::create(&abs).unwrap();
         f.write_all(content.as_bytes()).unwrap();
@@ -50,16 +54,23 @@ pub async fn fakeroot_with_stock_coreutils(world: &mut World) {
     world.write_file("/usr/bin/xargs", b"gnu-xargs", true);
 }
 
-#[given(regex = r#"^a verified replacement artifact is available for package \"(coreutils|findutils|sudo)\"$"#)]
+#[given(
+    regex = r#"^a verified replacement artifact is available for package \"(coreutils|findutils|sudo)\"$"#
+)]
 pub async fn verified_artifact_available(world: &mut World, pkg: String) {
     let (rel_path, contents): (PathBuf, &'static [u8]) = match pkg.as_str() {
         "coreutils" => (PathBuf::from("/opt/uutils/uutils"), b"uutils-binary"),
-        "findutils" => (PathBuf::from("/opt/uutils-findutils/uutils-findutils"), b"uutils-findutils-binary"),
+        "findutils" => (
+            PathBuf::from("/opt/uutils-findutils/uutils-findutils"),
+            b"uutils-findutils-binary",
+        ),
         "sudo" => (PathBuf::from("/opt/sudo-rs/sudo-rs"), b"sudo-rs-binary"),
         _ => unreachable!(),
     };
     let abs = world.under_root(&rel_path);
-    if let Some(parent) = abs.parent() { let _ = std::fs::create_dir_all(parent); }
+    if let Some(parent) = abs.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
     std::fs::write(&abs, contents).unwrap();
     #[cfg(unix)]
     {

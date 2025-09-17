@@ -10,21 +10,16 @@ struct StatusJson<'a> {
 }
 
 pub fn exec(root: &Path, json: bool) -> Result<(), String> {
-    let ls = root.join("usr/bin/ls");
-    let find = root.join("usr/bin/find");
-    let sudo = root.join("usr/bin/sudo");
-    let coreutils_active = ls
-        .symlink_metadata()
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false);
-    let findutils_active = find
-        .symlink_metadata()
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false);
-    let sudo_active = sudo
-        .symlink_metadata()
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false);
+    let check = |name: &str| -> bool {
+        root.join("usr/bin").join(name)
+            .symlink_metadata()
+            .map(|m| m.file_type().is_symlink())
+            .unwrap_or(false)
+    };
+    // Consider package active if ANY representative applet symlink exists
+    let coreutils_active = ["ls", "cat", "echo", "mv"].iter().any(|n| check(n));
+    let findutils_active = ["find", "xargs"].iter().any(|n| check(n));
+    let sudo_active = check("sudo");
 
     if json {
         let payload = StatusJson {

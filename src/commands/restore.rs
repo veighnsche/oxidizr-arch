@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 use switchyard::logging::JsonlSink;
@@ -11,7 +11,7 @@ use crate::adapters::arch_adapter::ArchAdapter;
 use crate::cli::args::Package;
 use crate::util::paths::ensure_under_root;
 use oxidizr_cli_core::dest_dir_path;
-use oxidizr_cli_core::{static_fallback_applets, PackageKind, DistroAdapter};
+use oxidizr_cli_core::{static_fallback_applets, DistroAdapter, PackageKind};
 use serde_json::json;
 
 #[allow(unused_variables)]

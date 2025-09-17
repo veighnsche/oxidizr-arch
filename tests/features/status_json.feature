@@ -4,7 +4,7 @@ Feature: Status JSON
 
   Scenario: status after commit use coreutils shows active
     Given a staging root at /tmp/fakeroot
-    And a verified replacement artifact is available for package "coreutils"
+    And a verified replacement artifact lists applets "ls echo mv" for package "coreutils"
     When I run `oxidizr-arch --commit use coreutils`
     Then the command exits 0
     When I run `oxidizr-arch status --json`

@@ -29,14 +29,24 @@ pub async fn output_not_contains(world: &mut World, needle: String) {
 pub async fn stderr_contains(world: &mut World, needle: String) {
     let out = world.last_output.as_ref().expect("no output captured");
     let s = String::from_utf8_lossy(&out.stderr);
-    assert!(s.contains(&needle), "stderr missing: {}\n--- stderr ---\n{}", needle, s);
+    assert!(
+        s.contains(&needle),
+        "stderr missing: {}\n--- stderr ---\n{}",
+        needle,
+        s
+    );
 }
 
 #[then(regex = r"^stdout contains `(.+)`$")]
 pub async fn stdout_contains(world: &mut World, needle: String) {
     let out = world.last_output.as_ref().expect("no output captured");
     let s = String::from_utf8_lossy(&out.stdout);
-    assert!(s.contains(&needle), "stdout missing: {}\n--- stdout ---\n{}", needle, s);
+    assert!(
+        s.contains(&needle),
+        "stdout missing: {}\n--- stdout ---\n{}",
+        needle,
+        s
+    );
 }
 
 #[then(regex = r"^output contains `(.+)`$")]

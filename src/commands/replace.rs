@@ -8,10 +8,10 @@ use switchyard::Switchyard;
 
 use crate::adapters::arch::pm_lock_message;
 use crate::adapters::arch_adapter::ArchAdapter;
-use oxidizr_cli_core::DistroAdapter;
 use crate::cli::args::Package;
 use crate::util::paths::ensure_under_root;
 use oxidizr_cli_core::dest_dir_path;
+use oxidizr_cli_core::DistroAdapter;
 use oxidizr_cli_core::{coverage_preflight, PackageKind};
 use serde_json::json;
 use switchyard::types::safepath::SafePath;
@@ -41,12 +41,18 @@ pub fn exec(
         }
     }
 
-    // Ensure RS is installed & active using `use` semantics first
+    // For each target, run coverage preflight first, then invoke `use`
     for p in &targets {
         let (offline, use_local) = if root != Path::new("/") {
-            if let Some(path) = guess_artifact_path(root, *p) { (true, Some(path)) } else { (false, None) }
-        } else { (false, None) };
-        crate::commands::r#use::exec(api, root, *p, offline, use_local.clone(), mode)?;
+            if let Some(path) = guess_artifact_path(root, *p) {
+                (true, Some(path))
+            } else {
+                (false, None)
+            }
+        } else {
+            (false, None)
+        };
+
         // Preflight coverage against current distro set (for coreutils/findutils)
         let kind = match p {
             Package::Coreutils => Some(PackageKind::Coreutils),
@@ -54,7 +60,11 @@ pub fn exec(
             Package::Sudo => None,
         };
         if let Some(k) = kind {
-            let source_bin = if offline { use_local.clone().unwrap() } else { resolve_source_bin(*p) };
+            let source_bin = if offline {
+                use_local.clone().unwrap()
+            } else {
+                resolve_source_bin(*p)
+            };
             if let Err(missing) = coverage_preflight(&adapter, root, k, &source_bin) {
                 return Err(format!(
                     "coverage preflight failed for {:?}: missing: {}",
@@ -63,6 +73,9 @@ pub fn exec(
                 ));
             }
         }
+
+        // Ensure RS is installed & active using `use` semantics
+        crate::commands::r#use::exec(api, root, *p, offline, use_local.clone(), mode)?;
     }
 
     // Snapshot distro-provided names for post-verify (only for coreutils/findutils)
@@ -77,7 +90,9 @@ pub fn exec(
             let names = adapter.enumerate_package_commands(root, kind);
             let source_bin = if root != Path::new("/") {
                 guess_artifact_path(root, *p).unwrap_or_else(|| resolve_source_bin(*p))
-            } else { resolve_source_bin(*p) };
+            } else {
+                resolve_source_bin(*p)
+            };
             verify_sets.push((*p, names, source_bin));
         }
     }

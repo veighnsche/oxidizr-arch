@@ -62,7 +62,9 @@ impl World {
         use std::process::Command;
         let mut cmd = Command::cargo_bin("oxidizr-arch").expect("cargo bin oxidizr-arch");
         cmd.args(args);
-        for (k, v) in &self.envs { cmd.env(k, v); }
+        for (k, v) in &self.envs {
+            cmd.env(k, v);
+        }
         cmd.env("PAGER", "cat");
         cmd.output().expect("run oxidizr-arch")
     }

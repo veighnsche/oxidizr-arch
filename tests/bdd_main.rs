@@ -2,11 +2,11 @@
 fn main() {}
 
 #[cfg(feature = "bdd")]
-#[path = "world.rs"]
-mod world;
-#[cfg(feature = "bdd")]
 #[path = "steps/mod.rs"]
 mod steps;
+#[cfg(feature = "bdd")]
+#[path = "world.rs"]
+mod world;
 
 #[cfg(feature = "bdd")]
 #[tokio::main(flavor = "multi_thread")]

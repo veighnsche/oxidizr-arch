@@ -1,8 +1,8 @@
 use std::path::Path;
 use std::process::Command;
 
-use oxidizr_cli_core::{DistroAdapter, PackageKind, static_fallback_applets};
 use oxidizr_cli_core::dest_dir_path;
+use oxidizr_cli_core::{static_fallback_applets, DistroAdapter, PackageKind};
 
 pub struct ArchAdapter;
 
@@ -22,7 +22,8 @@ impl DistroAdapter for ArchAdapter {
             }
             // Filter by package allowlist to emulate per-package enumeration
             let allow = static_fallback_applets(pkg);
-            let allow_set: std::collections::HashSet<&str> = allow.iter().map(|s| s.as_str()).collect();
+            let allow_set: std::collections::HashSet<&str> =
+                allow.iter().map(|s| s.as_str()).collect();
             names.retain(|n| allow_set.contains(n.as_str()));
             names.sort();
             names.dedup();

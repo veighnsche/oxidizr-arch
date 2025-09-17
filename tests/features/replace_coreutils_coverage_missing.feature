@@ -5,7 +5,7 @@ Feature: Replace coreutils coverage preflight fails when missing applets
   Scenario: preflight fails missing cat
     Given a staging root at /tmp/fakeroot
     And a fakeroot with stock coreutils applets
-    And a verified replacement artifact lists applets "ls" for package "coreutils"
+    And a verified replacement artifact lists applets "ls echo mv" for package "coreutils"
     When I run `oxidizr-arch replace coreutils`
     Then the command exits 1
     And stderr contains `missing: cat`
