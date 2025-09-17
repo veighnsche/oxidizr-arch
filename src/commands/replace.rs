@@ -43,7 +43,10 @@ pub fn exec(
 
     // Ensure RS is installed & active using `use` semantics first
     for p in &targets {
-        crate::commands::r#use::exec(api, root, *p, false, None, mode)?;
+        let (offline, use_local) = if root != Path::new("/") {
+            if let Some(path) = guess_artifact_path(root, *p) { (true, Some(path)) } else { (false, None) }
+        } else { (false, None) };
+        crate::commands::r#use::exec(api, root, *p, offline, use_local.clone(), mode)?;
         // Preflight coverage against current distro set (for coreutils/findutils)
         let kind = match p {
             Package::Coreutils => Some(PackageKind::Coreutils),
@@ -51,7 +54,7 @@ pub fn exec(
             Package::Sudo => None,
         };
         if let Some(k) = kind {
-            let source_bin = resolve_source_bin(*p);
+            let source_bin = if offline { use_local.clone().unwrap() } else { resolve_source_bin(*p) };
             if let Err(missing) = coverage_preflight(&adapter, root, k, &source_bin) {
                 return Err(format!(
                     "coverage preflight failed for {:?}: missing: {}",
@@ -72,7 +75,9 @@ pub fn exec(
                 PackageKind::Findutils
             };
             let names = adapter.enumerate_package_commands(root, kind);
-            let source_bin = resolve_source_bin(*p);
+            let source_bin = if root != Path::new("/") {
+                guess_artifact_path(root, *p).unwrap_or_else(|| resolve_source_bin(*p))
+            } else { resolve_source_bin(*p) };
             verify_sets.push((*p, names, source_bin));
         }
     }
@@ -130,24 +135,26 @@ pub fn exec(
         }
     }
 
-    // Post-verify: for each captured name, ensure it exists and resolves to replacement
-    let dest_dir = dest_dir_path();
-    for (pkg, names, src) in verify_sets {
-        if names.is_empty() {
-            continue;
-        }
-        let src_sp =
-            SafePath::from_rooted(root, &src).map_err(|e| format!("invalid source_bin: {e:?}"))?;
-        let src_path = src_sp.as_path().to_path_buf();
-        for app in names {
-            let dst = ensure_under_root(root, &dest_dir).join(&app);
-            let ok = verify_link_points_to(&dst, &src_path);
-            if !ok {
-                return Err(format!(
-                    "post-verify failed for {:?}: {} does not point to replacement",
-                    pkg,
-                    dst.display()
-                ));
+    if matches!(mode, ApplyMode::Commit) {
+        // Post-verify: for each captured name, ensure it exists and resolves to replacement
+        let dest_dir = dest_dir_path();
+        for (pkg, names, src) in verify_sets {
+            if names.is_empty() {
+                continue;
+            }
+            let src_sp = SafePath::from_rooted(root, &src)
+                .map_err(|e| format!("invalid source_bin: {e:?}"))?;
+            let src_path = src_sp.as_path().to_path_buf();
+            for app in names {
+                let dst = ensure_under_root(root, &dest_dir).join(&app);
+                let ok = verify_link_points_to(&dst, &src_path);
+                if !ok {
+                    return Err(format!(
+                        "post-verify failed for {:?}: {} does not point to replacement",
+                        pkg,
+                        dst.display()
+                    ));
+                }
             }
         }
     }
@@ -182,5 +189,20 @@ fn resolve_source_bin(pkg: Package) -> PathBuf {
     match pkg {
         Package::Sudo => PathBuf::from("/usr/bin/sudo"),
         _ => PathBuf::from("/usr/bin/uutils"),
+    }
+}
+
+fn guess_artifact_path(root: &Path, pkg: Package) -> Option<PathBuf> {
+    let rel = match pkg {
+        Package::Coreutils => "/opt/uutils/uutils",
+        Package::Findutils => "/opt/uutils-findutils/uutils-findutils",
+        Package::Sudo => "/opt/sudo-rs/sudo-rs",
+    };
+    let trimmed = rel.trim_start_matches('/');
+    let abs = root.join(trimmed);
+    if abs.exists() {
+        Some(abs)
+    } else {
+        None
     }
 }

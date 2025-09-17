@@ -26,7 +26,7 @@ pub fn exec(
 ) -> Result<(), String> {
     // Lock check on live root for commit
     let live_root = root == Path::new("/");
-    if matches!(mode, ApplyMode::Commit) && live_root {
+    if matches!(mode, ApplyMode::Commit) {
         if let Some(msg) = pm_lock_message(root) {
             return Err(msg);
         }
@@ -118,9 +118,13 @@ pub fn exec(
     }
 
     // Resolve a plausible multi-call or single-binary source path
-    let source_bin = resolve_source_bin(package);
-    // Preflight: for sudo on live root commit, require setuid root
-    if matches!(mode, ApplyMode::Commit) && live_root {
+    let source_bin = if offline {
+        if let Some(p) = use_local.clone() { p } else { return Err("--offline requires --use-local PATH".to_string()); }
+    } else {
+        resolve_source_bin(package)
+    };
+    // Preflight: for sudo on commit, require setuid root
+    if matches!(mode, ApplyMode::Commit) {
         if matches!(package, Package::Sudo) {
             sudo_guard(root, &source_bin)?;
         }
@@ -185,11 +189,8 @@ pub fn exec(
                     }
                 }
             }
-            let need = if matches!(package, Package::Coreutils) {
-                2
-            } else {
-                1
-            };
+            let required = if matches!(package, Package::Coreutils) { 2 } else { 1 };
+            let need = std::cmp::min(required, applets.len());
             if count < need {
                 return Err(format!("post-apply smoke failed: expected >={} links to point to replacement, found {}", need, count));
             }

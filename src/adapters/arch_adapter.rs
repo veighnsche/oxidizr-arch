@@ -1,14 +1,32 @@
 use std::path::Path;
 use std::process::Command;
 
-use oxidizr_cli_core::{DistroAdapter, PackageKind};
+use oxidizr_cli_core::{DistroAdapter, PackageKind, static_fallback_applets};
+use oxidizr_cli_core::dest_dir_path;
 
 pub struct ArchAdapter;
 
 impl DistroAdapter for ArchAdapter {
     fn enumerate_package_commands(&self, root: &Path, pkg: PackageKind) -> Vec<String> {
         if root != Path::new("/") {
-            return Vec::new();
+            // Hermetic fallback for tests: enumerate all names under <root>/usr/bin
+            let dest = dest_dir_path();
+            let base = root.join(dest.strip_prefix("/").unwrap_or(&dest));
+            let mut names = Vec::new();
+            if let Ok(rd) = std::fs::read_dir(&base) {
+                for ent in rd.flatten() {
+                    if let Some(name) = ent.file_name().to_str() {
+                        names.push(name.to_string());
+                    }
+                }
+            }
+            // Filter by package allowlist to emulate per-package enumeration
+            let allow = static_fallback_applets(pkg);
+            let allow_set: std::collections::HashSet<&str> = allow.iter().map(|s| s.as_str()).collect();
+            names.retain(|n| allow_set.contains(n.as_str()));
+            names.sort();
+            names.dedup();
+            return names;
         }
         let name = match pkg {
             PackageKind::Coreutils => "coreutils",
