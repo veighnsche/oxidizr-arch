@@ -42,7 +42,9 @@ fn check_locks(root: &Path) -> (bool, Vec<String>) {
     let mut held = vec![];
     for l in locks {
         let p = root.join(l.trim_start_matches('/'));
-        if !p.exists() { continue; }
+        if !p.exists() {
+            continue;
+        }
         if let Ok(f) = OpenOptions::new().read(true).write(true).open(&p) {
             if f.try_lock_exclusive().is_err() {
                 held.push(l.to_string());
@@ -64,17 +66,31 @@ pub fn exec(root: &Path, json: bool) -> Result<(), String> {
     let paths_ok = check_paths(root);
     let mut tips = vec![];
     if locks_present {
-        tips.push("Package manager busy (pacman lock detected); retry after current operation finishes.".to_string());
+        tips.push(
+            "Package manager busy (pacman lock detected); retry after current operation finishes."
+                .to_string(),
+        );
     }
     if !paths_ok {
         tips.push(
-            "Missing expected directories under --root (usr/bin); ensure target root is correct.".to_string(),
+            "Missing expected directories under --root (usr/bin); ensure target root is correct."
+                .to_string(),
         );
     }
 
     if json {
-        let rep = DoctorReport { distro_id, distro_version, locks_present, locks, paths_ok, tips };
-        println!("{}", serde_json::to_string(&rep).map_err(|e| e.to_string())?);
+        let rep = DoctorReport {
+            distro_id,
+            distro_version,
+            locks_present,
+            locks,
+            paths_ok,
+            tips,
+        };
+        println!(
+            "{}",
+            serde_json::to_string(&rep).map_err(|e| e.to_string())?
+        );
     } else {
         println!(
             "Detected distro: {} {}",
@@ -83,7 +99,9 @@ pub fn exec(root: &Path, json: bool) -> Result<(), String> {
         );
         if locks_present {
             println!("Locks present: yes");
-            for l in &locks { println!("  - {}", l); }
+            for l in &locks {
+                println!("  - {}", l);
+            }
         } else {
             println!("Locks present: no");
         }
@@ -93,7 +111,9 @@ pub fn exec(root: &Path, json: bool) -> Result<(), String> {
         );
         if !tips.is_empty() {
             println!("Tips:");
-            for t in &tips { println!("  - {}", t); }
+            for t in &tips {
+                println!("  - {}", t);
+            }
         }
     }
     Ok(())

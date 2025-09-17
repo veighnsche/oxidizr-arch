@@ -26,3 +26,52 @@ pub fn pm_lock_message(root: &Path) -> Option<String> {
         Some("Package manager may be busy (pacman db.lck present)".to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+
+    fn mk_lock_path(root: &Path) -> std::path::PathBuf {
+        let rel = "var/lib/pacman";
+        let p = root.join(rel);
+        let _ = fs::create_dir_all(&p);
+        p.join("db.lck")
+    }
+
+    #[test]
+    fn test_pacman_lock_guard_when_db_lck_present_and_locked() {
+        let t = tempfile::tempdir().unwrap();
+        let lock = mk_lock_path(t.path());
+        let f = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&lock)
+            .unwrap();
+        // Hold an exclusive lock to simulate pacman running
+        f.lock_exclusive().unwrap();
+        let msg = pm_lock_message(t.path());
+        // Release lock after check
+        let _ = f.unlock();
+        assert!(msg.is_some(), "expected lock message when db.lck is held");
+    }
+
+    #[test]
+    fn test_pacman_lock_guard_when_db_lck_present_but_unlocked() {
+        let t = tempfile::tempdir().unwrap();
+        let lock = mk_lock_path(t.path());
+        let _f = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&lock)
+            .unwrap();
+        // No lock taken; pm_lock_message should be able to lock and thus return None
+        let msg = pm_lock_message(t.path());
+        assert!(
+            msg.is_none(),
+            "no message when db.lck exists but is not locked"
+        );
+    }
+}

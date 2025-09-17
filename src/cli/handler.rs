@@ -1,9 +1,9 @@
 use oxidizr_cli_core::api::build_api;
 use oxidizr_cli_core::prompts::should_proceed;
+use switchyard::logging::JsonlSink;
 use switchyard::policy::Policy;
 use switchyard::types::ApplyMode;
 use switchyard::Switchyard;
-use switchyard::logging::JsonlSink;
 
 use crate::cli::args::{Cli, Commands};
 
@@ -47,13 +47,26 @@ pub fn dispatch(cli: Cli) -> Result<(), String> {
                     return Err("aborted by user".to_string());
                 }
             }
-            crate::commands::restore::exec(&api, &cli.root, package, all, keep_replacements, apply_mode, cli.assume_yes)
+            crate::commands::restore::exec(
+                &api,
+                &cli.root,
+                package,
+                all,
+                keep_replacements,
+                apply_mode,
+                cli.assume_yes,
+            )
         }
         Commands::Status { json } => crate::commands::status::exec(&cli.root, json),
         Commands::Doctor { json } => crate::commands::doctor::exec(&cli.root, json),
-        Commands::Replace { package, all } => {
-            crate::commands::replace::exec(&api, &cli.root, package, all, apply_mode, cli.assume_yes)
-        }
+        Commands::Replace { package, all } => crate::commands::replace::exec(
+            &api,
+            &cli.root,
+            package,
+            all,
+            apply_mode,
+            cli.assume_yes,
+        ),
         Commands::Completions { shell } => crate::cli::completions::emit(shell),
     }
 }

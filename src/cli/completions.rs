@@ -9,7 +9,9 @@ pub fn emit(shell: Shell) -> Result<(), String> {
         Shell::Bash => {
             clap_complete::generate(Bash, &mut cmd, "oxidizr-arch", &mut std::io::stdout())
         }
-        Shell::Zsh => clap_complete::generate(Zsh, &mut cmd, "oxidizr-arch", &mut std::io::stdout()),
+        Shell::Zsh => {
+            clap_complete::generate(Zsh, &mut cmd, "oxidizr-arch", &mut std::io::stdout())
+        }
         Shell::Fish => {
             clap_complete::generate(Fish, &mut cmd, "oxidizr-arch", &mut std::io::stdout())
         }

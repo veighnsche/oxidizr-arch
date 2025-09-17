@@ -1,3 +1,3 @@
 pub mod args;
-pub mod handler;
 pub mod completions;
+pub mod handler;

@@ -1,6 +1,7 @@
+mod adapters;
 mod cli;
 mod commands;
-mod adapters;
+mod util;
 
 use clap::Parser;
 

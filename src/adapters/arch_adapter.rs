@@ -29,7 +29,10 @@ impl DistroAdapter for ArchAdapter {
             let mut parts = line.split_whitespace();
             let _pkg = parts.next();
             if let Some(path) = parts.next() {
-                if let Some(n) = path.strip_prefix("/usr/bin/").or_else(|| path.strip_prefix("/bin/")) {
+                if let Some(n) = path
+                    .strip_prefix("/usr/bin/")
+                    .or_else(|| path.strip_prefix("/bin/"))
+                {
                     if !n.is_empty() && !n.ends_with('/') {
                         names.push(n.to_string());
                     }
