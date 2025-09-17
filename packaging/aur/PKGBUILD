@@ -23,7 +23,7 @@ build() {
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}" 2>/dev/null || cd "${srcdir}/${pkgname}-v${pkgver}"
   install -Dm755 "target/release/oxidizr-arch" "${pkgdir}/usr/bin/oxidizr-arch"
-  install -Dm644 README-oxidizr-arch.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+  install -Dm644 cargo/oxidizr-arch/README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
   install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   install -Dm644 LICENSE-MIT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE-MIT"
 }
