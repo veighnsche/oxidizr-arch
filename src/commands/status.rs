@@ -1,4 +1,5 @@
-use std::path::Path;
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
@@ -10,12 +11,33 @@ struct StatusJson<'a> {
 }
 
 pub fn exec(root: &Path, json: bool) -> Result<(), String> {
-    let check = |name: &str| -> bool {
-        root.join("usr/bin").join(name)
-            .symlink_metadata()
-            .map(|m| m.file_type().is_symlink())
-            .unwrap_or(false)
-    };
+    fn symlink_points_to_executable(root: &Path, name: &str) -> bool {
+        let link_path = root.join("usr/bin").join(name);
+        let md = match link_path.symlink_metadata() {
+            Ok(m) => m,
+            Err(_) => return false,
+        };
+        if !md.file_type().is_symlink() {
+            return false;
+        }
+        let tgt = match std::fs::read_link(&link_path) {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+        let abs: PathBuf = if tgt.is_absolute() {
+            tgt
+        } else {
+            link_path
+                .parent()
+                .unwrap_or(Path::new("/"))
+                .join(tgt)
+        };
+        match std::fs::metadata(&abs) {
+            Ok(m) => m.permissions().mode() & 0o111 != 0,
+            Err(_) => false,
+        }
+    }
+    let check = |name: &str| -> bool { symlink_points_to_executable(root, name) };
     // Consider package active if ANY representative applet symlink exists
     let coreutils_active = ["ls", "cat", "echo", "mv"].iter().any(|n| check(n));
     let findutils_active = ["find", "xargs"].iter().any(|n| check(n));

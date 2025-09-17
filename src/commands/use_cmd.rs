@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::os::unix::fs::PermissionsExt;
 use std::process::{Command, Stdio};
 
 use switchyard::logging::JsonlSink;
@@ -35,7 +36,8 @@ pub fn exec(
     // Map packages to Arch replacement and distro package names
     let (rs_pkg, _distro_pkg) = match package {
         Package::Coreutils => ("uutils-coreutils", "coreutils"),
-        Package::Findutils => ("uutils-findutils", "findutils"),
+        // Arch/AUR ships findutils replacement as uutils-findutils-bin
+        Package::Findutils => ("uutils-findutils-bin", "findutils"),
         Package::Sudo => ("sudo-rs", "sudo"),
     };
 
@@ -52,6 +54,7 @@ pub fn exec(
                 let mut tried = Vec::new();
                 let mut ok = false;
                 let mut last_code = 1;
+                let mut last_stderr_tail = String::new();
                 // pacman -S --noconfirm
                 tried.push(format!("pacman -S --noconfirm {}", rs_pkg));
                 let mut cmd = Command::new("pacman");
@@ -61,12 +64,20 @@ pub fn exec(
                 cmd.stderr(Stdio::piped());
                 if let Ok(out) = cmd.output() {
                     last_code = out.status.code().unwrap_or(1);
+                    last_stderr_tail = String::from_utf8_lossy(&out.stderr)
+                        .chars()
+                        .rev()
+                        .take(400)
+                        .collect::<String>()
+                        .chars()
+                        .rev()
+                        .collect::<String>();
                     eprintln!(
                         "{}",
                         json!({
                             "event":"pm.install","pm":{"tool":"pacman","args":["-S","--noconfirm",rs_pkg],"package":rs_pkg},
                             "exit_code": last_code,
-                            "stderr_tail": String::from_utf8_lossy(&out.stderr).chars().rev().take(400).collect::<String>().chars().rev().collect::<String>()
+                            "stderr_tail": last_stderr_tail
                         })
                     );
                     ok = out.status.success();
@@ -83,12 +94,20 @@ pub fn exec(
                         cmd.stderr(Stdio::piped());
                         if let Ok(out) = cmd.output() {
                             last_code = out.status.code().unwrap_or(1);
+                            last_stderr_tail = String::from_utf8_lossy(&out.stderr)
+                                .chars()
+                                .rev()
+                                .take(400)
+                                .collect::<String>()
+                                .chars()
+                                .rev()
+                                .collect::<String>();
                             eprintln!(
                                 "{}",
                                 json!({
                                     "event":"pm.install","pm":{"tool":"paru","args":["-S","--noconfirm",rs_pkg],"package":rs_pkg},
                                     "exit_code": last_code,
-                                    "stderr_tail": String::from_utf8_lossy(&out.stderr).chars().rev().take(400).collect::<String>().chars().rev().collect::<String>()
+                                    "stderr_tail": last_stderr_tail
                                 })
                             );
                             ok = out.status.success();
@@ -101,12 +120,16 @@ pub fn exec(
                     }
                 }
                 if !ok {
-                    return Err(format!(
+                    let mut msg = format!(
                         "failed to install {} (tried: {}; last_code={})",
                         rs_pkg,
                         tried.join("; "),
                         last_code
-                    ));
+                    );
+                    if rs_pkg == "uutils-findutils-bin" && last_stderr_tail.to_lowercase().contains("root") {
+                        msg.push_str(". AUR helper refused to run as root. Install 'uutils-findutils-bin' as a non-root user with your AUR helper, then rerun: 'oxidizr-arch --commit use findutils'.");
+                    }
+                    return Err(msg);
                 }
             }
         }
@@ -117,7 +140,7 @@ pub fn exec(
         );
     }
 
-    // Resolve a plausible multi-call or single-binary source path
+    // Resolve a plausible multi-call or single-binary source path (base)
     let source_bin = if offline {
         if let Some(p) = use_local.clone() {
             p
@@ -141,14 +164,51 @@ pub fn exec(
         Package::Sudo => PackageKind::Sudo,
     };
     let applets = resolve_applets_for_use(&ArchAdapter, root, pkg_kind, &source_bin);
+    eprintln!(
+        "{}",
+        json!({
+            "event": "use.exec.resolved",
+            "package": format!("{:?}", package),
+            "source_bin": source_bin.display().to_string(),
+            "applets_count": applets.len(),
+            "applets_sample": applets.iter().take(5).collect::<Vec<_>>()
+        })
+    );
 
-    // Build link plan
+    // Build link plan (prefer per-applet binaries on Arch when available)
     let dest_dir = dest_dir_path();
     let mut links = Vec::new();
     for app in &applets {
         let dest_base = ensure_under_root(root, &dest_dir);
         let dst = dest_base.join(app);
-        let s_sp = SafePath::from_rooted(root, &source_bin)
+        let src_for_app = if offline {
+            source_bin.clone()
+        } else {
+            resolve_applet_source(package, &source_bin, app)
+        };
+        // Avoid creating dangling symlinks: require that source exists and is executable
+        if let Ok(md) = std::fs::metadata(&src_for_app) {
+            if md.permissions().mode() & 0o111 == 0 {
+                eprintln!(
+                    "{}",
+                    json!({
+                        "event":"use.exec.skip_applet","reason":"source_not_executable","applet":app,
+                        "source": src_for_app.display().to_string()
+                    })
+                );
+                continue;
+            }
+        } else {
+            eprintln!(
+                "{}",
+                json!({
+                    "event":"use.exec.skip_applet","reason":"source_missing","applet":app,
+                    "source": src_for_app.display().to_string()
+                })
+            );
+            continue;
+        }
+        let s_sp = SafePath::from_rooted(root, &src_for_app)
             .map_err(|e| format!("invalid source_bin: {e:?}"))?;
         let d_sp = SafePath::from_rooted(root, &dst).map_err(|e| format!("invalid dest: {e:?}"))?;
         links.push(LinkRequest {
@@ -174,13 +234,18 @@ pub fn exec(
                 {
                     use std::fs;
                     use std::os::unix::fs as unix_fs;
-                    let src_abs = SafePath::from_rooted(root, &source_bin)
-                        .map_err(|e2| format!("invalid source_bin: {e2:?}"))?
-                        .as_path()
-                        .to_path_buf();
                     for app in &applets {
                         let dest_base = ensure_under_root(root, &dest_dir);
                         let dst = dest_base.join(app);
+                        let src_for_app = if offline {
+                            source_bin.clone()
+                        } else {
+                            resolve_applet_source(package, &source_bin, app)
+                        };
+                        let src_abs = SafePath::from_rooted(root, &src_for_app)
+                            .map_err(|e2| format!("invalid source_bin: {e2:?}"))?
+                            .as_path()
+                            .to_path_buf();
                         let _ = fs::remove_file(&dst);
                         if let Some(parent) = dst.parent() {
                             let _ = fs::create_dir_all(parent);
@@ -195,21 +260,39 @@ pub fn exec(
     };
 
     if matches!(mode, ApplyMode::DryRun) {
-        eprintln!("dry-run: planned {} actions", rep.executed.len());
+        eprintln!(
+            "{}",
+            json!({
+                "event":"use.exec.dry_run",
+                "planned_actions": rep.executed.len()
+            })
+        );
     } else {
+        eprintln!(
+            "{}",
+            json!({
+                "event":"use.exec.apply_ok",
+                "executed_actions": rep.executed.len()
+            })
+        );
         // On non-live roots during commit, ensure symlinks exist (idempotent helper for hermetic tests)
         if root != Path::new("/") {
             #[cfg(unix)]
             {
                 use std::fs;
                 use std::os::unix::fs as unix_fs;
-                let src_abs = SafePath::from_rooted(root, &source_bin)
-                    .map_err(|e2| format!("invalid source_bin: {e2:?}"))?
-                    .as_path()
-                    .to_path_buf();
                 for app in &applets {
                     let dest_base = ensure_under_root(root, &dest_dir);
                     let dst = dest_base.join(app);
+                    let src_for_app = if offline {
+                        source_bin.clone()
+                    } else {
+                        resolve_applet_source(package, &source_bin, app)
+                    };
+                    let src_abs = SafePath::from_rooted(root, &src_for_app)
+                        .map_err(|e2| format!("invalid source_bin: {e2:?}"))?
+                        .as_path()
+                        .to_path_buf();
                     let _ = fs::remove_file(&dst);
                     if let Some(parent) = dst.parent() {
                         let _ = fs::create_dir_all(parent);
@@ -218,29 +301,27 @@ pub fn exec(
                 }
             }
         }
-        // Minimal smoke: ensure some symlinks point to source_bin; run only on live root
+        // Minimal smoke: ensure some linked applets point to an executable target; run only on live root
         if root == Path::new("/") {
             #[cfg(unix)]
             {
                 use std::fs;
                 let mut count = 0usize;
-                let src = SafePath::from_rooted(root, &source_bin)
-                    .map_err(|e| format!("invalid source_bin: {e:?}"))?
-                    .as_path()
-                    .to_path_buf();
                 for app in &applets {
                     let dest_base = ensure_under_root(root, &dest_dir);
                     let dst = dest_base.join(app);
                     if let Ok(md) = fs::symlink_metadata(&dst) {
                         if md.file_type().is_symlink() {
-                            if let Ok(cur) = fs::read_link(&dst) {
-                                let cur_abs = if cur.is_absolute() {
-                                    cur
+                            if let Ok(tgt) = fs::read_link(&dst) {
+                                let cur_abs = if tgt.is_absolute() {
+                                    tgt
                                 } else {
-                                    dst.parent().unwrap_or(std::path::Path::new("/")).join(cur)
+                                    dst.parent().unwrap_or(std::path::Path::new("/")).join(tgt)
                                 };
-                                if cur_abs == src {
-                                    count += 1;
+                                if let Ok(m) = fs::metadata(&cur_abs) {
+                                    if m.permissions().mode() & 0o111 != 0 {
+                                        count += 1;
+                                    }
                                 }
                             }
                         }
@@ -253,7 +334,7 @@ pub fn exec(
                 };
                 let need = std::cmp::min(required, applets.len());
                 if count < need {
-                    return Err(format!("post-apply smoke failed: expected >={} links to point to replacement, found {}", need, count));
+                    return Err(format!("post-apply smoke failed: expected >={} linked applets to target an executable, found {}", need, count));
                 }
             }
         }
@@ -272,11 +353,64 @@ fn pacman_installed(name: &str) -> bool {
     matches!(st, Ok(s) if s.success())
 }
 
+fn pacman_query_dispatcher(pkg: Package) -> Option<PathBuf> {
+    let pkg_name = match pkg {
+        Package::Coreutils => "uutils-coreutils",
+        Package::Findutils => "uutils-findutils-bin",
+        Package::Sudo => "sudo-rs",
+    };
+    let out = Command::new("pacman")
+        .args(["-Ql", pkg_name])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let suffixes: &[&str] = match pkg {
+        Package::Coreutils => &["/uutils", "/coreutils"],
+        Package::Findutils => &["/findutils", "/uutils"],
+        Package::Sudo => &["/sudo-rs", "/sudo"],
+    };
+    for line in stdout.lines() {
+        // pacman -Ql output lines look like: "pkgname /path/to/file"
+        if let Some(path) = line.split_whitespace().nth(1) {
+            for suf in suffixes {
+                if path.ends_with(suf) {
+                    let p = PathBuf::from(path);
+                    if p.exists() {
+                        return Some(p);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 fn resolve_source_bin(pkg: Package) -> PathBuf {
+    if let Some(p) = pacman_query_dispatcher(pkg) {
+        return p;
+    }
     let candidates: &[&str] = match pkg {
-        Package::Coreutils => &["/usr/bin/uutils", "/usr/lib/uutils-coreutils/uutils"],
-        Package::Findutils => &["/usr/bin/uutils"],
-        Package::Sudo => &["/usr/bin/sudo-rs", "/usr/bin/sudo"],
+        // Prefer /usr/bin dispatchers first on Arch, then library locations as fallback
+        Package::Coreutils => &[
+            "/usr/bin/coreutils",
+            "/usr/bin/uutils",
+            "/usr/lib/uutils-coreutils/uutils",
+        ],
+        Package::Findutils => &[
+            "/usr/bin/findutils",
+            "/usr/lib/uutils-findutils/findutils",
+            "/usr/bin/uutils",
+        ],
+        Package::Sudo => &[
+            "/usr/bin/sudo-rs",
+            "/usr/bin/sudo",
+        ],
     };
     for c in candidates {
         let p = PathBuf::from(c);
@@ -284,9 +418,10 @@ fn resolve_source_bin(pkg: Package) -> PathBuf {
             return p;
         }
     }
-    // Fallback
+    // Fallbacks per package when nothing matched
     match pkg {
+        Package::Coreutils => PathBuf::from("/usr/bin/coreutils"),
+        Package::Findutils => PathBuf::from("/usr/bin/findutils"),
         Package::Sudo => PathBuf::from("/usr/bin/sudo"),
-        _ => PathBuf::from("/usr/bin/uutils"),
     }
 }
