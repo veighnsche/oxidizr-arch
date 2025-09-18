@@ -15,7 +15,7 @@ This CLI focuses on safety and UX:
 - The CLI ensures the right replacement is installed (pacman/AUR) and applies it safely.
 - You can restore to GNU/stock tools at any time.
 
-## Powered by Switchyard
+## Powered by Switchyard-fs
 
 [![Switchyard CI](https://github.com/veighnsche/switchyard/actions/workflows/test.yml/badge.svg)](https://github.com/veighnsche/switchyard/actions/workflows/test.yml)
 [![Crates.io](https://img.shields.io/crates/v/switchyard-fs.svg)](https://crates.io/crates/switchyard-fs)

@@ -1,5 +1,3 @@
-/// FILE TOO LARGE
-/// MODULARIZE NEXT REFACTOR
 use std::path::{Path, PathBuf};
 
 use switchyard::logging::JsonlSink;
