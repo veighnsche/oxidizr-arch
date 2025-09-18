@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  MSRV_TOOLCHAIN: '1.81.0'
+  MSRV_TOOLCHAIN: '1.85.0'
 
 jobs:
   msrv:

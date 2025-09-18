@@ -8,7 +8,7 @@ source "${SELF_DIR}/_common.sh"
 
 cd_crate_root
 
-MSRV_TOOLCHAIN="${MSRV_TOOLCHAIN:-1.81.0}"
+MSRV_TOOLCHAIN="${MSRV_TOOLCHAIN:-1.85.0}"
 ensure_toolchain "${MSRV_TOOLCHAIN}"
 
 log "Building with MSRV ${MSRV_TOOLCHAIN} (all features)"
