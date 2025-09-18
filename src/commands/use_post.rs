@@ -4,8 +4,8 @@ use switchyard::types::safepath::SafePath;
 use switchyard::types::ApplyMode;
 
 use crate::cli::args::Package;
-use crate::util::paths::ensure_under_root;
 use crate::commands::use_utils::resolve_applet_source;
+use crate::util::paths::ensure_under_root;
 use oxidizr_cli_core::dest_dir_path;
 
 /// On commit under non-live roots, attempt to create the intended symlinks manually
@@ -83,7 +83,11 @@ pub fn smoke_check_live_root(
                 }
             }
         }
-        let required = if matches!(package, Package::Coreutils) { 2 } else { 1 };
+        let required = if matches!(package, Package::Coreutils) {
+            2
+        } else {
+            1
+        };
         let need = std::cmp::min(required, applets.len());
         if count < need {
             return Err(format!(

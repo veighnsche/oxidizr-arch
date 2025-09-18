@@ -3,12 +3,13 @@ use std::path::{Path, PathBuf};
 use serde_json::json;
 
 use crate::cli::args::{Package, ParityLevel};
-use crate::util::selinux::selinux_enabled;
 use crate::commands::replace_utils::{link_points_to_exec, resolve_source_bin};
-use oxidizr_cli_core::{DistroAdapter, PackageKind};
-use oxidizr_cli_core::packages::{coreutils_critical_set, coreutils_selinux_set, static_fallback_applets};
+use crate::util::selinux::selinux_enabled;
 use oxidizr_cli_core::coverage2::coverage_preflight;
+use oxidizr_cli_core::packages::static_fallback_applets;
+use oxidizr_cli_core::{DistroAdapter, PackageKind};
 
+#[allow(dead_code)]
 pub struct ReplaceReady {
     pub provider: &'static str,
     pub selinux_on: bool,
@@ -22,7 +23,10 @@ pub fn enforce_replace_parity<A: DistroAdapter>(
     offline: bool,
     use_local: &Option<PathBuf>,
 ) -> Result<ReplaceReady, String> {
-    let provider = match pkg { Package::Sudo => "sudo-rs", _ => "uutils" };
+    let provider = match pkg {
+        Package::Sudo => "sudo-rs",
+        _ => "uutils",
+    };
     let selinux_on = selinux_enabled(root);
 
     // Strict mode: require full distro coverage via coverage_preflight
@@ -65,12 +69,15 @@ pub fn enforce_replace_parity<A: DistroAdapter>(
             provider,
             format!("{:?}", parity).to_lowercase()
         );
-        return Ok(ReplaceReady { provider, selinux_on });
+        return Ok(ReplaceReady {
+            provider,
+            selinux_on,
+        });
     }
 
     // Standard / Selinux / None
     let (critical_set, selinux_set): (Vec<String>, Vec<String>) = match pkg {
-        Package::Coreutils => (coreutils_critical_set(), coreutils_selinux_set()),
+        Package::Coreutils => (local_coreutils_critical_set(), local_coreutils_selinux_set()),
         Package::Findutils => (static_fallback_applets(PackageKind::Findutils), vec![]),
         Package::Sudo => (vec!["sudo".to_string()], vec![]),
     };
@@ -131,7 +138,29 @@ pub fn enforce_replace_parity<A: DistroAdapter>(
         format!("{:?}", parity).to_lowercase()
     );
 
-    Ok(ReplaceReady { provider, selinux_on })
+    Ok(ReplaceReady {
+        provider,
+        selinux_on,
+    })
+}
+
+fn local_coreutils_critical_set() -> Vec<String> {
+    vec![
+        "ls", "cp", "mv", "rm", "mkdir", "ln", "readlink", "cat", "echo", "date",
+        "touch", "chmod", "chown", "realpath", "mktemp", "paste", "cut", "sort",
+        "uniq", "tr", "wc", "tee", "head", "tail", "env", "printenv", "sleep",
+        "pwd", "basename", "dirname", "test", "true", "false",
+    ]
+    .into_iter()
+    .map(|s| s.to_string())
+    .collect()
+}
+
+fn local_coreutils_selinux_set() -> Vec<String> {
+    vec!["chcon", "runcon"]
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 /// Filter post-verify names according to parity policy to avoid false failures
@@ -146,19 +175,28 @@ pub fn filter_postverify_names(
         return names.into_iter().filter(|n| allow.contains(n)).collect();
     }
     if matches!(pkg, Package::Sudo) {
-        return vec!["sudo".to_string()].into_iter().filter(|n| names.contains(n)).collect();
+        return vec!["sudo".to_string()]
+            .into_iter()
+            .filter(|n| names.contains(n))
+            .collect();
     }
 
     // Coreutils
     let selinux_on = selinux_enabled(root);
-    let crit = coreutils_critical_set();
-    let se = coreutils_selinux_set();
+    let crit = local_coreutils_critical_set();
+    let se = local_coreutils_selinux_set();
     match parity {
         ParityLevel::Strict => names,
-        ParityLevel::Selinux => names.into_iter().filter(|n| crit.contains(n) || se.contains(n)).collect(),
+        ParityLevel::Selinux => names
+            .into_iter()
+            .filter(|n| crit.contains(n) || se.contains(n))
+            .collect(),
         ParityLevel::Standard => {
             if selinux_on {
-                names.into_iter().filter(|n| crit.contains(n) || se.contains(n)).collect()
+                names
+                    .into_iter()
+                    .filter(|n| crit.contains(n) || se.contains(n))
+                    .collect()
             } else {
                 names.into_iter().filter(|n| crit.contains(n)).collect()
             }

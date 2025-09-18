@@ -1,8 +1,8 @@
 use oxidizr_cli_core::api::build_api;
 use oxidizr_cli_core::prompts::should_proceed;
 use switchyard::logging::JsonlSink;
-use switchyard::policy::Policy;
 use switchyard::policy::types::SmokePolicy;
+use switchyard::policy::Policy;
 use switchyard::types::ApplyMode;
 use switchyard::Switchyard;
 
@@ -23,7 +23,8 @@ pub fn dispatch(cli: Cli) -> Result<(), String> {
 
     // Narrow scope to requested root and explicitly to its /usr/bin subtree
     policy.scope.allow_roots.push(cli.root.clone());
-    policy.scope
+    policy
+        .scope
         .allow_roots
         .push(cli.root.join("usr").join("bin"));
 
@@ -46,10 +47,9 @@ pub fn dispatch(cli: Cli) -> Result<(), String> {
             offline,
             use_local,
         } => {
-            if matches!(apply_mode, ApplyMode::Commit) {
-                if !should_proceed(cli.assume_yes, &cli.root) {
-                    return Err("aborted by user".to_string());
-                }
+            if matches!(apply_mode, ApplyMode::Commit) && !should_proceed(cli.assume_yes, &cli.root)
+            {
+                return Err("aborted by user".to_string());
             }
             crate::commands::r#use::exec(
                 &api,
@@ -67,10 +67,9 @@ pub fn dispatch(cli: Cli) -> Result<(), String> {
             all,
             keep_replacements,
         } => {
-            if matches!(apply_mode, ApplyMode::Commit) {
-                if !should_proceed(cli.assume_yes, &cli.root) {
-                    return Err("aborted by user".to_string());
-                }
+            if matches!(apply_mode, ApplyMode::Commit) && !should_proceed(cli.assume_yes, &cli.root)
+            {
+                return Err("aborted by user".to_string());
             }
             crate::commands::restore::exec(
                 &api,

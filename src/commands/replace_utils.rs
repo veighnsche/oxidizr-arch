@@ -1,18 +1,33 @@
-use std::path::{Path, PathBuf};
 use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 
 use crate::cli::args::Package;
-use switchyard::types::ApplyMode;
 use serde_json::json;
 use std::process::{Command, Stdio};
+use switchyard::types::ApplyMode;
 
 pub fn link_points_to_exec(root: &Path, name: &str) -> bool {
     let link_path = root.join("usr/bin").join(name);
-    let md = match std::fs::symlink_metadata(&link_path) { Ok(m) => m, Err(_) => return false };
-    if !md.file_type().is_symlink() { return false; }
-    let tgt = match std::fs::read_link(&link_path) { Ok(t) => t, Err(_) => return false };
-    let abs = if tgt.is_absolute() { tgt } else { link_path.parent().unwrap_or(Path::new("/")).join(tgt) };
-    match std::fs::metadata(&abs) { Ok(m) => m.permissions().mode() & 0o111 != 0, Err(_) => false }
+    let md = match std::fs::symlink_metadata(&link_path) {
+        Ok(m) => m,
+        Err(_) => return false,
+    };
+    if !md.file_type().is_symlink() {
+        return false;
+    }
+    let tgt = match std::fs::read_link(&link_path) {
+        Ok(t) => t,
+        Err(_) => return false,
+    };
+    let abs = if tgt.is_absolute() {
+        tgt
+    } else {
+        link_path.parent().unwrap_or(Path::new("/")).join(tgt)
+    };
+    match std::fs::metadata(&abs) {
+        Ok(m) => m.permissions().mode() & 0o111 != 0,
+        Err(_) => false,
+    }
 }
 
 pub fn remove_distro_packages(

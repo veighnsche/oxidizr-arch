@@ -1,7 +1,5 @@
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::os::unix::fs::PermissionsExt;
 
 use switchyard::logging::JsonlSink;
 use switchyard::types::ApplyMode;
@@ -10,21 +8,15 @@ use switchyard::Switchyard;
 use crate::adapters::arch::pm_lock_message;
 use crate::adapters::arch_adapter::ArchAdapter;
 use crate::cli::args::{Package, ParityLevel};
-use crate::util::selinux::selinux_enabled;
-use crate::util::paths::ensure_under_root;
-use crate::commands::replace_utils::{
-    link_points_to_exec,
-    verify_link_points_to,
-    resolve_source_bin,
-    guess_artifact_path,
-    remove_distro_packages,
-};
 use crate::commands::replace_parity::{enforce_replace_parity, filter_postverify_names};
+use crate::commands::replace_utils::{
+    guess_artifact_path, remove_distro_packages, resolve_source_bin, verify_link_points_to,
+};
+use crate::util::paths::ensure_under_root;
+use crate::util::selinux::selinux_enabled;
 use oxidizr_cli_core::dest_dir_path;
 use oxidizr_cli_core::DistroAdapter;
-use oxidizr_cli_core::{coverage_preflight, PackageKind};
-use oxidizr_cli_core::packages::{coreutils_critical_set, coreutils_selinux_set, static_fallback_applets};
-use serde_json::json;
+use oxidizr_cli_core::PackageKind;
 use switchyard::types::safepath::SafePath;
 
 #[allow(unused_variables)]
@@ -66,10 +58,31 @@ pub fn exec(
         };
 
         // Ensure RS is installed & active using `use` semantics (no parity enforcement here)
-        crate::commands::r#use::exec(api, root, *p, offline, use_local.clone(), mode, parity, None)?;
+        crate::commands::r#use::exec(
+            api,
+            root,
+            *p,
+            offline,
+            use_local.clone(),
+            mode,
+            parity,
+            None,
+        )?;
 
         // Enforce parity gates (Replace semantics) and emit summaries
-        let _ready = enforce_replace_parity(&adapter, root, *p, parity, offline, &use_local)?;
+        let effective_parity = if matches!(mode, ApplyMode::DryRun) {
+            ParityLevel::Strict
+        } else {
+            parity
+        };
+        let _ready = enforce_replace_parity(
+            &adapter,
+            root,
+            *p,
+            effective_parity,
+            offline,
+            &use_local,
+        )?;
     }
 
     // Snapshot distro-provided names for post-verify (only for coreutils/findutils)
@@ -129,7 +142,11 @@ pub fn exec(
             println!("[OK] replace {:?}: post-verify links look good", pkg);
         }
         // Final friendly summary
-        let sel_summary = if selinux_enabled(root) { "enabled" } else { "disabled" };
+        let sel_summary = if selinux_enabled(root) {
+            "enabled"
+        } else {
+            "disabled"
+        };
         println!(
             "[DONE] replace: parity={} (selinux={}) removed={} package(s)",
             format!("{:?}", parity).to_lowercase(),

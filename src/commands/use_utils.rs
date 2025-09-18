@@ -47,10 +47,7 @@ pub fn resolve_applet_source(pkg: Package, base: &Path, applet: &str) -> PathBuf
             "/usr/bin/uu-", // will be appended
             "/usr/lib/uutils-coreutils/uu-",
         ],
-        Package::Findutils => &[
-            "/usr/bin/uu-",
-            "/usr/lib/uutils-findutils/uu-",
-        ],
+        Package::Findutils => &["/usr/bin/uu-", "/usr/lib/uutils-findutils/uu-"],
         Package::Sudo => &[],
     };
     for prefix in candidates {
@@ -116,10 +113,7 @@ pub fn resolve_source_bin(pkg: Package) -> PathBuf {
             "/usr/lib/uutils-findutils/findutils",
             "/usr/bin/uutils",
         ],
-        Package::Sudo => &[
-            "/usr/bin/sudo-rs",
-            "/usr/bin/sudo",
-        ],
+        Package::Sudo => &["/usr/bin/sudo-rs", "/usr/bin/sudo"],
     };
     for c in candidates {
         let p = PathBuf::from(c);
@@ -135,6 +129,7 @@ pub fn resolve_source_bin(pkg: Package) -> PathBuf {
 }
 
 /// Check whether a pacman package is installed.
+#[allow(dead_code)]
 pub fn pacman_installed(name: &str) -> bool {
     let st = Command::new("pacman")
         .args(["-Qi", name])

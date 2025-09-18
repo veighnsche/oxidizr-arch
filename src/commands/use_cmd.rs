@@ -1,10 +1,9 @@
 /// FILE TOO LARGE
 /// MODULARIZE NEXT REFACTOR
-
 use std::path::{Path, PathBuf};
 
 use switchyard::logging::JsonlSink;
-use switchyard::types::{ApplyMode, LinkRequest, PlanInput};
+use switchyard::types::{ApplyMode, PlanInput};
 use switchyard::Switchyard;
 
 use crate::adapters::arch::pm_lock_message;
@@ -12,17 +11,17 @@ use crate::adapters::arch_adapter::ArchAdapter;
 use crate::adapters::preflight::sudo_guard;
 use crate::cli::args::{Package, ParityLevel};
 
-use crate::commands::use_utils::{resolve_source_bin};
-use crate::commands::use_link_planner::plan_links;
 use crate::commands::use_install::ensure_replacement_installed;
-use crate::commands::use_post::{ensure_symlinks_non_live_root, smoke_check_live_root};
+use crate::commands::use_link_planner::plan_links;
 use crate::commands::use_parity::emit_use_parity_summary;
-use oxidizr_cli_core::dest_dir_path;
+use crate::commands::use_post::{ensure_symlinks_non_live_root, smoke_check_live_root};
+use crate::commands::use_utils::resolve_source_bin;
 use oxidizr_cli_core::{resolve_applets_for_use, PackageKind};
 
 use serde_json::json;
 
 #[allow(unused_variables)]
+#[allow(clippy::too_many_arguments)]
 pub fn exec(
     api: &Switchyard<JsonlSink, JsonlSink>,
     root: &Path,
@@ -70,10 +69,8 @@ pub fn exec(
         resolve_source_bin(package)
     };
     // Preflight: for sudo on commit, require setuid root
-    if matches!(mode, ApplyMode::Commit) {
-        if matches!(package, Package::Sudo) {
-            sudo_guard(root, &source_bin)?;
-        }
+    if matches!(mode, ApplyMode::Commit) && matches!(package, Package::Sudo) {
+        sudo_guard(root, &source_bin)?;
     }
 
     // Compute applets via shared core (dynamic discovery + distro intersection on live root)
@@ -95,7 +92,8 @@ pub fn exec(
     );
 
     // Build link plan (prefer per-applet binaries on Arch when available)
-    let (mut links, skipped) = plan_links(root, package, offline, &source_bin, &applets)?;
+    let (links, skipped) = plan_links(root, package, offline, &source_bin, &applets)?;
+    let planned = links.len();
 
     let plan = api.plan(PlanInput {
         link: links,
@@ -125,9 +123,9 @@ pub fn exec(
                 "planned_actions": rep.executed.len()
             })
         );
+        eprintln!("dry-run: planned {} action(s)", planned);
         // Human-friendly preview summary to stdout
         let pkg_name = format!("{:?}", package).to_lowercase();
-        let planned = links.len();
         println!(
             "[DRY-RUN] use {}: would link {} applet(s). No changes made.",
             pkg_name, planned
@@ -152,7 +150,7 @@ pub fn exec(
         allow_missing,
         &applets,
         &skipped,
-        links.len(),
+        planned,
     );
 
     Ok(())

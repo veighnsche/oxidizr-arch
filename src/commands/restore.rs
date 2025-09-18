@@ -163,14 +163,12 @@ pub fn exec(
                 }
             }
         }
-    } else {
-        if !keep_replacements {
-            for p in &packages {
-                eprintln!(
-                    "[dry-run] would run: pacman -R --noconfirm {}",
-                    replacement_pkg_name(*p)
-                );
-            }
+    } else if !keep_replacements {
+        for p in &packages {
+            eprintln!(
+                "[dry-run] would run: pacman -R --noconfirm {}",
+                replacement_pkg_name(*p)
+            );
         }
     }
 

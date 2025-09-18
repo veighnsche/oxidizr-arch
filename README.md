@@ -1,5 +1,10 @@
 # oxidizr-arch — Arch Linux CLI to use Rust replacements safely
 
+[![Lint](https://github.com/veighnsche/oxidizr-arch/actions/workflows/lint.yml/badge.svg)](https://github.com/veighnsche/oxidizr-arch/actions/workflows/lint.yml)
+[![Test](https://github.com/veighnsche/oxidizr-arch/actions/workflows/test.yml/badge.svg)](https://github.com/veighnsche/oxidizr-arch/actions/workflows/test.yml)
+[![MSRV](https://github.com/veighnsche/oxidizr-arch/actions/workflows/msrv.yml/badge.svg)](https://github.com/veighnsche/oxidizr-arch/actions/workflows/msrv.yml)
+[![Smoke](https://github.com/veighnsche/oxidizr-arch/actions/workflows/smoke.yml/badge.svg)](https://github.com/veighnsche/oxidizr-arch/actions/workflows/smoke.yml)
+
 oxidizr-arch is a small, safety-first CLI that switches key system toolchains to their
 Rust replacements on Arch and derivatives (GNU coreutils → uutils-coreutils, findutils → uutils-findutils, sudo → sudo-rs).
 It performs safe, atomic, reversible changes under the hood via the Switchyard engine and keeps a one-step restore path.
@@ -46,6 +51,15 @@ GitHub Actions builds and runs a smoke test inside an Arch Linux container using
 Artifacts uploaded:
 - `arch_status.json` from `status --json`
 - `arch_doctor.json` from `doctor --json`
+
+## Developer scripts
+
+Convenience scripts live under `scripts/` in this crate:
+
+- `scripts/arch_dev_shell.sh` — interactive Arch container with `oxidizr-arch` built from this repo, for safe manual testing.
+- `scripts/arch_dev_proof.sh` — non-interactive proof run inside a disposable Arch container; prints diagnostics and JSON outputs.
+
+These scripts do not modify your host; all operations occur inside a container.
 
 ## License
 

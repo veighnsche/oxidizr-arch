@@ -1,0 +1,37 @@
+name: Smoke (Arch container)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  arch-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and smoke-test in Arch container
+        run: |
+          set -euxo pipefail
+          docker run --rm -v "$PWD:/work" -w /work archlinux:base-devel bash -lc '
+            set -euxo pipefail
+            pacman -Syu --noconfirm
+            pacman -S --needed --noconfirm git sudo which jq tar xz curl rust cargo base-devel python
+            # Build binary (support both workspace and single-crate layouts)
+            (cargo build -p oxidizr-arch --release || cargo build --release)
+            install -Dm0755 target/release/oxidizr-arch /usr/local/bin/oxidizr-arch
+            ROOT=$(mktemp -d)
+            mkdir -p "$ROOT/usr/bin" "$ROOT/var/lock"
+            oxidizr-arch --root "$ROOT" status --json | tee /tmp/arch_status.json || true
+            oxidizr-arch --root "$ROOT" doctor --json | tee /tmp/arch_doctor.json || true
+          '
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-smoke-logs
+          path: |
+            /tmp/arch_status.json
+            /tmp/arch_doctor.json
+          if-no-files-found: ignore

@@ -27,10 +27,7 @@ pub fn exec(root: &Path, json: bool) -> Result<(), String> {
         let abs: PathBuf = if tgt.is_absolute() {
             tgt
         } else {
-            link_path
-                .parent()
-                .unwrap_or(Path::new("/"))
-                .join(tgt)
+            link_path.parent().unwrap_or(Path::new("/")).join(tgt)
         };
         match std::fs::metadata(&abs) {
             Ok(m) => m.permissions().mode() & 0o111 != 0,

@@ -5,7 +5,7 @@ use serde_json::json;
 
 use crate::cli::args::{Package, ParityLevel};
 use crate::util::selinux::selinux_enabled;
-use oxidizr_cli_core::packages::{coreutils_critical_set, coreutils_selinux_set, static_fallback_applets};
+use oxidizr_cli_core::packages::static_fallback_applets;
 use oxidizr_cli_core::PackageKind;
 
 /// Compute and emit parity summary for `use`.
@@ -19,7 +19,10 @@ pub fn emit_use_parity_summary(
     skipped: &[String],
     linked_count: usize,
 ) -> (bool, Vec<String>, Vec<String>) {
-    let provider = match package { Package::Sudo => "sudo-rs", _ => "uutils" };
+    let provider = match package {
+        Package::Sudo => "sudo-rs",
+        _ => "uutils",
+    };
     let selinux_on = selinux_enabled(root);
     let allow_set: HashSet<String> = allow_missing
         .unwrap_or_default()
@@ -35,7 +38,7 @@ pub fn emit_use_parity_summary(
         .collect();
 
     let (critical_set, selinux_set): (Vec<String>, Vec<String>) = match package {
-        Package::Coreutils => (coreutils_critical_set(), coreutils_selinux_set()),
+        Package::Coreutils => (local_coreutils_critical_set(), local_coreutils_selinux_set()),
         Package::Findutils => (static_fallback_applets(PackageKind::Findutils), vec![]),
         Package::Sudo => (vec!["sudo".to_string()], vec![]),
     };
@@ -64,9 +67,13 @@ pub fn emit_use_parity_summary(
 
     let parity_ok = match parity {
         ParityLevel::None => true,
-        ParityLevel::Standard => critical_missing_eval.is_empty() && (!selinux_on || selinux_missing.is_empty()),
+        ParityLevel::Standard => {
+            critical_missing_eval.is_empty() && (!selinux_on || selinux_missing.is_empty())
+        }
         ParityLevel::Selinux => critical_missing_eval.is_empty() && selinux_missing.is_empty(),
-        ParityLevel::Strict => critical_missing_eval.is_empty() && (!selinux_on || selinux_missing.is_empty()),
+        ParityLevel::Strict => {
+            critical_missing_eval.is_empty() && (!selinux_on || selinux_missing.is_empty())
+        }
     };
 
     // JSON summary (stderr)
@@ -88,7 +95,11 @@ pub fn emit_use_parity_summary(
     // Human-friendly summary (stdout)
     let pkg_name = format!("{:?}", package).to_lowercase();
     let status = if parity_ok { "OK" } else { "WARN" };
-    let skipped_text = if skipped.is_empty() { "none".to_string() } else { skipped.join(", ") };
+    let skipped_text = if skipped.is_empty() {
+        "none".to_string()
+    } else {
+        skipped.join(", ")
+    };
     let sel = if selinux_on { "enabled" } else { "disabled" };
     println!(
         "[{}] use {}: provider={} linked={} skipped=[{}] parity={} ({}) selinux={}",
@@ -103,4 +114,23 @@ pub fn emit_use_parity_summary(
     );
 
     (parity_ok, critical_missing, selinux_missing)
+}
+
+fn local_coreutils_critical_set() -> Vec<String> {
+    vec![
+        "ls", "cp", "mv", "rm", "mkdir", "ln", "readlink", "cat", "echo", "date",
+        "touch", "chmod", "chown", "realpath", "mktemp", "paste", "cut", "sort",
+        "uniq", "tr", "wc", "tee", "head", "tail", "env", "printenv", "sleep",
+        "pwd", "basename", "dirname", "test", "true", "false",
+    ]
+    .into_iter()
+    .map(|s| s.to_string())
+    .collect()
+}
+
+fn local_coreutils_selinux_set() -> Vec<String> {
+    vec!["chcon", "runcon"]
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect()
 }

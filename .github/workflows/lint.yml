@@ -1,0 +1,57 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Format check
+        run: |
+          set -euo pipefail
+          # Format only this crate where supported; fallback to workspace-wide.
+          (cargo fmt -p oxidizr-arch -- --check) || cargo fmt -- --check
+      - name: Clippy (warnings as errors)
+        run: cargo clippy -p oxidizr-arch --all-targets -- -D warnings
+
+      - name: Zero-SKIP gate (no #[ignore] tests)
+        run: |
+          set -euo pipefail
+          if [ -d tests ]; then
+            if grep -R --line-number -E '^[[:space:]]*#\[ignore\]' tests; then
+              echo "ERROR: #[ignore] present in tests; Zero-SKIP gate requires no skipped tests." >&2
+              exit 1
+            fi
+          fi
+
+      - name: Changelog updated for oxidizr-arch crate changes
+        run: |
+          set -euo pipefail
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            changed=$(git diff --name-only HEAD^)
+            if echo "$changed" | grep -E '^(src/|Cargo.toml|SPEC/|docs/|hack/|tests/)'; then
+              if ! echo "$changed" | grep -q '^CHANGELOG.md$'; then
+                echo "ERROR: Detected changes to oxidizr-arch crate without updating CHANGELOG.md" >&2
+                echo "Changed files:" >&2
+                echo "$changed" >&2
+                exit 1
+              fi
+            fi
+          fi

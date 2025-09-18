@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+- Internal: add crate-scoped CI workflows under `.github/workflows/` (lint, test, msrv, smoke, publish-dry-run).
+- Internal: add local CI runner scripts under `scripts/ci/` to mirror GitHub Actions.
+- Internal: apply `rustfmt` across crate sources (no functional changes).
+
 ## [0.1.0] - 2025-09-18
 - Initial release.
 - Features:

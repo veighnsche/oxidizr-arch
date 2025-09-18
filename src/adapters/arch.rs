@@ -30,7 +30,7 @@ pub fn pm_lock_message(root: &Path) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::{self, File};
+    use std::fs::{self};
 
     fn mk_lock_path(root: &Path) -> std::path::PathBuf {
         let rel = "var/lib/pacman";
@@ -45,6 +45,7 @@ mod tests {
         let lock = mk_lock_path(t.path());
         let f = OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(&lock)
@@ -63,6 +64,7 @@ mod tests {
         let lock = mk_lock_path(t.path());
         let _f = OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(&lock)

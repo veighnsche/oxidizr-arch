@@ -5,7 +5,11 @@ use serde_json::json;
 
 /// Ensure the replacement package is installed on a live root.
 /// Emits JSON events for package manager operations.
-pub fn ensure_replacement_installed(root: &Path, rs_pkg: &str, live_root: bool) -> Result<(), String> {
+pub fn ensure_replacement_installed(
+    root: &Path,
+    rs_pkg: &str,
+    live_root: bool,
+) -> Result<(), String> {
     if !live_root {
         eprintln!(
             "[info] skipping pacman/paru install under non-live root: {}",
@@ -104,7 +108,10 @@ pub fn ensure_replacement_installed(root: &Path, rs_pkg: &str, live_root: bool) 
                 cmd.stdin(Stdio::null());
                 cmd.stdout(Stdio::piped());
                 cmd.stderr(Stdio::piped());
-                tried.push(format!("sudo -u {} paru -S --noconfirm {}", helper_user, rs_pkg));
+                tried.push(format!(
+                    "sudo -u {} paru -S --noconfirm {}",
+                    helper_user, rs_pkg
+                ));
                 if let Ok(out) = cmd.output() {
                     last_code = out.status.code().unwrap_or(1);
                     last_stderr_tail = String::from_utf8_lossy(&out.stderr)

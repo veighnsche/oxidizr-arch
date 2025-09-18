@@ -4,8 +4,8 @@ use switchyard::types::safepath::SafePath;
 use switchyard::types::LinkRequest;
 
 use crate::cli::args::Package;
-use crate::util::paths::ensure_under_root;
 use crate::commands::use_utils::resolve_applet_source;
+use crate::util::paths::ensure_under_root;
 use oxidizr_cli_core::dest_dir_path;
 
 /// Build the link requests for a set of applets. Returns (links, skipped_applets).
