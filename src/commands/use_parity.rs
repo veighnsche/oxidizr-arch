@@ -38,7 +38,10 @@ pub fn emit_use_parity_summary(
         .collect();
 
     let (critical_set, selinux_set): (Vec<String>, Vec<String>) = match package {
-        Package::Coreutils => (local_coreutils_critical_set(), local_coreutils_selinux_set()),
+        Package::Coreutils => (
+            local_coreutils_critical_set(),
+            local_coreutils_selinux_set(),
+        ),
         Package::Findutils => (static_fallback_applets(PackageKind::Findutils), vec![]),
         Package::Sudo => (vec!["sudo".to_string()], vec![]),
     };
@@ -118,10 +121,9 @@ pub fn emit_use_parity_summary(
 
 fn local_coreutils_critical_set() -> Vec<String> {
     vec![
-        "ls", "cp", "mv", "rm", "mkdir", "ln", "readlink", "cat", "echo", "date",
-        "touch", "chmod", "chown", "realpath", "mktemp", "paste", "cut", "sort",
-        "uniq", "tr", "wc", "tee", "head", "tail", "env", "printenv", "sleep",
-        "pwd", "basename", "dirname", "test", "true", "false",
+        "ls", "cp", "mv", "rm", "mkdir", "ln", "readlink", "cat", "echo", "date", "touch", "chmod",
+        "chown", "realpath", "mktemp", "paste", "cut", "sort", "uniq", "tr", "wc", "tee", "head",
+        "tail", "env", "printenv", "sleep", "pwd", "basename", "dirname", "test", "true", "false",
     ]
     .into_iter()
     .map(|s| s.to_string())

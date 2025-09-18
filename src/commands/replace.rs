@@ -75,14 +75,8 @@ pub fn exec(
         } else {
             parity
         };
-        let _ready = enforce_replace_parity(
-            &adapter,
-            root,
-            *p,
-            effective_parity,
-            offline,
-            &use_local,
-        )?;
+        let _ready =
+            enforce_replace_parity(&adapter, root, *p, effective_parity, offline, &use_local)?;
     }
 
     // Snapshot distro-provided names for post-verify (only for coreutils/findutils)
