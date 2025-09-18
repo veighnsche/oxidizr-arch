@@ -41,7 +41,57 @@ oxidizr-arch is powered by the Switchyard engine, which provides the safe, deter
   - Governance: preflight policy gates incl. rescue verification; locking semantics; smoke tests with auto‑rollback.
   - Observability: structured facts/audit emission with minimal provenance; backup retention and pruning APIs.
 
-Status: scaffolding only. `status` and `doctor` work; `use`/`replace`/`restore` are TODO.
+Status: early but functional. All commands are implemented; defaults are tuned for container/dev workflows. Production‑hardening guidance and presets are evolving.
+
+### Stability and Safety Notes
+
+- Defaults in `handler.rs` relax certain policy gates and disable smoke tests for container/dev ergonomics. Review and harden policy before making live changes with `--commit`.
+- On a live root, commands may install/remove packages via pacman/AUR and update symlinks under `/usr/bin`. Ensure the system is quiescent (no pacman lock) and have a restore path.
+- `replace` enforces parity gates suitable for a fuller switch; `use` activates replacements without parity enforcement.
+- To enable production smoke checks and stricter governance, wire a smoke runner and enforce policy in your build/profile.
+
+#### Why the defaults are relaxed (dev/CI rationale)
+
+The defaults in `src/cli/handler.rs` are tuned for repeatable CI and container-based dev flows where the environment is intentionally minimal:
+
+- allow_unlocked_commit = true
+  - Rationale: our CI/container flows do not provision a system-wide lock manager path by default. Allowing commit without an external lock avoids spurious failures while still attaching a best-effort file lock.
+- override_preflight = true
+  - Rationale: preflight STOP gates (immutability, strict ownership, rescue, etc.) are useful in production but block experimentation in ephemeral containers. Overriding preflight lets us exercise apply/rollback paths during tests without requiring full system parity.
+- rescue.require = false
+  - Rationale: minimal CI images may not include BusyBox or enough GNU tools to meet the rescue profile. We still demonstrate backup/restore semantics in tests, but do not hard-fail on missing rescue capabilities.
+- smoke = Off
+  - Rationale: enabling smoke in containers can trigger auto‑rollback and add flakiness when binaries/symlinks are synthetic or when namespaces are unusual. Disabling smoke in dev keeps CI deterministic and focused on planner/apply parity.
+
+These choices are about developer ergonomics—not about production guidance. When running on a live system with `--commit`, you should enable stricter governance.
+
+#### Enabling production checks (example)
+
+In production, enable locking, preflight gates, rescue verification, and smoke tests. For example:
+
+```rust
+use switchyard::api::ApiBuilder;
+use switchyard::policy::{Policy, types::SmokePolicy};
+use switchyard::adapters::{FileLockManager, DefaultSmokeRunner};
+use switchyard::logging::JsonlSink;
+use std::path::PathBuf;
+
+let facts = JsonlSink::default();
+let audit = JsonlSink::default();
+
+let mut policy = Policy::production_preset();
+policy.governance.allow_unlocked_commit = false;
+policy.apply.override_preflight = false;
+policy.rescue.require = true;
+policy.governance.smoke = SmokePolicy::Required;
+
+let api = ApiBuilder::new(facts.clone(), audit, policy)
+    .with_lock_manager(Box::new(FileLockManager::new(PathBuf::from("/var/lock/switchyard.lock"))))
+    .with_smoke_runner(Box::new(DefaultSmokeRunner::default()))
+    .build();
+```
+
+See the Switchyard mdBook for more on presets and governance knobs.
 
 ## Packages
 
@@ -67,9 +117,9 @@ oxidizr-arch [--root PATH] [--commit] <COMMAND> [ARGS]
 
 - `status` — report whether replacement symlinks are active
 - `doctor` — Arch diagnostics (pacman lock, basic paths)
-- `use` — ensure replacement installed and switch safely (TODO)
-- `restore` — switch back to GNU/stock (TODO)
-- `replace` — remove GNU packages after activating replacements (TODO)
+- `use` — ensure replacement installed and switch safely
+- `restore` — switch back to GNU/stock
+- `replace` — remove GNU packages after activating replacements
 
 ## CI on Ubuntu runners (Arch container)
 
