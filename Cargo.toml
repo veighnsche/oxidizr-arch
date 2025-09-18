@@ -8,7 +8,7 @@ repository = "https://github.com/veighnsche/oxidizr-arch"
 keywords = ["cli", "archlinux", "switchyard", "uutils", "sudo-rs"]
 categories = ["command-line-utilities"]
 readme = "README.md"
-rust-version = "1.85"
+rust-version = "1.89"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
