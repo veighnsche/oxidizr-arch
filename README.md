@@ -15,6 +15,32 @@ This CLI focuses on safety and UX:
 - The CLI ensures the right replacement is installed (pacman/AUR) and applies it safely.
 - You can restore to GNU/stock tools at any time.
 
+## Powered by Switchyard
+
+[![Switchyard CI](https://github.com/veighnsche/switchyard/actions/workflows/test.yml/badge.svg)](https://github.com/veighnsche/switchyard/actions/workflows/test.yml)
+[![Crates.io](https://img.shields.io/crates/v/switchyard-fs.svg)](https://crates.io/crates/switchyard-fs)
+[![docs.rs](https://img.shields.io/docsrs/switchyard-fs)](https://docs.rs/switchyard-fs)
+[![mdBook](https://img.shields.io/badge/book-mdBook-blue)](https://veighnsche.github.io/switchyard/)
+
+oxidizr-arch is powered by the Switchyard engine, which provides the safe, deterministic apply/rollback core used by this CLI. Switchyard handles atomic symlink swaps with backup/restore, preflight policy gates, rescue verification, locking, optional smoke checks with auto‑rollback, and structured facts/audit emission.
+
+- Project README: [cargo/switchyard/README.md](../switchyard/README.md)
+- Operator & Integrator Guide (mdBook): <https://veighnsche.github.io/switchyard/>
+- API docs on docs.rs: <https://docs.rs/switchyard-fs>
+
+## Responsibilities
+
+- CLI (oxidizr-arch)
+  - UX and ergonomics: simple commands (`status`, `doctor`, `use`, `restore`, `replace`) with friendly output and `--json` variants.
+  - Arch‑specific orchestration: ensure/verify packages via pacman/AUR; select correct replacements and paths; detect pacman locks; provide containerized CI smoke runs.
+  - Planning and wiring: choose a Switchyard policy preset suitable for Arch switches; construct source→target symlink plans and invoke Switchyard; provide adapters (e.g., file lock manager) as needed.
+  - Distro guardrails: refuse to mutate when prerequisites are missing; keep a one‑step restore path; never change the host unless `--commit` is provided.
+
+- Switchyard
+  - Core engine: `SafePath`, atomic symlink swap with backup/restore, cross‑FS degraded fallback (policy‑controlled), deterministic IDs and redaction.
+  - Governance: preflight policy gates incl. rescue verification; locking semantics; smoke tests with auto‑rollback.
+  - Observability: structured facts/audit emission with minimal provenance; backup retention and pruning APIs.
+
 Status: scaffolding only. `status` and `doctor` work; `use`/`replace`/`restore` are TODO.
 
 ## Packages
@@ -38,6 +64,7 @@ cargo run -p oxidizr-arch -- --help
 ```text
 oxidizr-arch [--root PATH] [--commit] <COMMAND> [ARGS]
 ```
+
 - `status` — report whether replacement symlinks are active
 - `doctor` — Arch diagnostics (pacman lock, basic paths)
 - `use` — ensure replacement installed and switch safely (TODO)
@@ -49,6 +76,7 @@ oxidizr-arch [--root PATH] [--commit] <COMMAND> [ARGS]
 GitHub Actions builds and runs a smoke test inside an Arch Linux container using `test-orch/docker/Dockerfile`.
 
 Artifacts uploaded:
+
 - `arch_status.json` from `status --json`
 - `arch_doctor.json` from `doctor --json`
 
