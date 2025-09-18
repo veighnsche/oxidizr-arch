@@ -18,6 +18,16 @@ docker run --rm -it -v "${REPO_ROOT}":"${WORK}" -w "${WORK}" "$IMG" bash -lc '
 set -euo pipefail
 set -x
 
+# Ensure /etc/machine-id exists to silence noisy prompts/tools that read it
+if [ ! -s /etc/machine-id ]; then
+  if command -v systemd-machine-id-setup >/dev/null 2>&1; then
+    systemd-machine-id-setup >/dev/null 2>&1 || true
+  else
+    tr -d '-' </proc/sys/kernel/random/uuid | head -c 32 > /etc/machine-id || true
+    echo >> /etc/machine-id
+  fi
+fi
+
 # Update and install base tooling
 pacman -Syu --noconfirm
 pacman -Sy --noconfirm archlinux-keyring || true

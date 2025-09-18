@@ -15,6 +15,17 @@ docker run --rm -i -v "${REPO_ROOT}":"${WORKDIR}" -w "${WORKDIR}" "$IMG" bash -s
 set -euo pipefail
 set -x
 
+# Ensure /etc/machine-id exists to silence noisy prompts/tools that read it
+if [ ! -s /etc/machine-id ]; then
+  if command -v systemd-machine-id-setup >/dev/null 2>&1; then
+    systemd-machine-id-setup >/dev/null 2>&1 || true
+  else
+    # Fallback: generate a 32-hex machine-id from a random UUID
+    tr -d '-' </proc/sys/kernel/random/uuid | head -c 32 > /etc/machine-id || true
+    echo >> /etc/machine-id
+  fi
+fi
+
 # Refresh packages and install prerequisites
 pacman -Syu --noconfirm
 pacman -S --needed --noconfirm git sudo which jq tar xz curl rust cargo base-devel python
