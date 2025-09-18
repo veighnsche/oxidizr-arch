@@ -99,6 +99,27 @@ See the Switchyard mdBook for more on presets and governance knobs.
 - findutils → uutils-findutils (AUR)
 - sudo → sudo-rs (pacman)
 
+## Install (paru or yay)
+
+Install from the AUR using your preferred helper:
+
+- With paru:
+
+```bash
+paru -S oxidizr-arch
+```
+
+- With yay:
+
+```bash
+yay -S oxidizr-arch
+```
+
+Tips:
+
+- For the latest development version, use the `-git` package (e.g., `oxidizr-arch-git`).
+- Uninstall with `paru -Rns oxidizr-arch` or `yay -Rns oxidizr-arch`.
+
 ## Build
 
 ```bash
