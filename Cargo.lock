@@ -631,9 +631,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.15.5"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
+checksum = "5419bdc4f6a9207fbeba6d11b604d481addf78ecd10c11ad51e76c2f6482748d"
 
 [[package]]
 name = "heck"
@@ -695,9 +695,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.11.3"
+version = "2.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92119844f513ffa41556430369ab02c295a3578af21cf945caa3e9e0c2481ac3"
+checksum = "4b0f83760fb341a774ed326568e19f5a863af4a952def8c39f9ab92fd95b88e5"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -933,9 +933,9 @@ dependencies = [
 
 [[package]]
 name = "oxidizr-cli-core"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e0792b6fb1cfd466ca50df08905d7ccf34c03d5831588e80ee0188cb3547b28"
+checksum = "7fb3394088dea4e533ea9fc3b05d709a63f19698d7f467187bd07bd3e6ecc13c"
 dependencies = [
  "atty",
  "switchyard-fs",
@@ -1270,9 +1270,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "switchyard-fs"
-version = "0.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf43075c4bc59ce1c9cb29304c06dd901ba7fbe3d38dbe32d9a14b9a302695af"
+checksum = "6aed931dcb8dd0c9d1dffa1f1730e866eb173c6840ffcf21bc3ddf2a5a2632bc"
 dependencies = [
  "base64",
  "fs2",
