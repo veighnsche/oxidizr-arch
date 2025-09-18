@@ -1,42 +1,48 @@
 # Maintainer: Your Name <you@example.com>
 
-pkgname=oxidizr-arch
-pkgver=0.1.0
+pkgname=oxidizr-arch-git
+pkgver=0.1.0.r0.gabcdef
 pkgrel=1
-pkgdesc="Arch CLI to safely switch coreutils/findutils/sudo to Rust replacements via Switchyard (dry-run by default)"
+pkgdesc="Arch CLI to safely switch coreutils/findutils/sudo to Rust replacements via Switchyard (git master)"
 arch=('x86_64' 'aarch64')
 url="https://github.com/veighnsche/oxidizr-arch"
 license=('Apache' 'MIT')
 depends=('bash' 'pacman')
-makedepends=('rust' 'cargo' 'help2man')
+makedepends=('git' 'rust' 'cargo' 'help2man')
 optdepends=(
   'paru: AUR helper for installing AUR replacements (optional)'
   'sudo: Fallback for running AUR helper as non-root user'
-  'policycoreutils: Provides getenforce for SELinux detection (optional)'
+  'libselinux: Enables SELinux detection via getenforce if present'
   'bash-completion: Bash completion'
   'zsh: Zsh completion'
   'fish: Fish completion'
 )
 provides=('oxidizr-arch')
-conflicts=('oxidizr-arch-git')
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/veighnsche/oxidizr-arch/archive/refs/tags/v${pkgver}.tar.gz")
+conflicts=('oxidizr-arch')
+source=("git+https://github.com/veighnsche/oxidizr-arch.git")
 sha256sums=('SKIP')
 
+pkgver() {
+  cd "${srcdir}/oxidizr-arch"
+  # Format: latest-tag.r<commits-since-tag>.g<short-hash>
+  git describe --tags --long --dirty --always | sed 's/^v//; s/-/./g'
+}
+
 prepare() {
-  cd "${srcdir}/${pkgname}-${pkgver}" 2>/dev/null || cd "${srcdir}/${pkgname}-v${pkgver}"
-  cargo fetch --locked
+  cd "${srcdir}/oxidizr-arch"
+  cargo fetch --locked || cargo fetch
 }
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}" 2>/dev/null || cd "${srcdir}/${pkgname}-v${pkgver}"
-  cargo build -p oxidizr-arch --release --locked
+  cd "${srcdir}/oxidizr-arch"
+  cargo build -p oxidizr-arch --release --locked || cargo build -p oxidizr-arch --release
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}" 2>/dev/null || cd "${srcdir}/${pkgname}-v${pkgver}"
+  cd "${srcdir}/oxidizr-arch"
   install -Dm755 "target/release/oxidizr-arch" "${pkgdir}/usr/bin/oxidizr-arch"
   # Docs
-  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/oxidizr-arch/README.md"
 
   # Shell completions
   mkdir -p "${srcdir}/completions"
@@ -54,11 +60,11 @@ package() {
     install -Dm644 "${srcdir}/oxidizr-arch.1" "${pkgdir}/usr/share/man/man1/oxidizr-arch.1"
   fi
 
-  # Licenses (if present in release tarball)
+  # Licenses (if present)
   if [[ -f LICENSE ]]; then
-    install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/oxidizr-arch/LICENSE"
   fi
   if [[ -f LICENSE-MIT ]]; then
-    install -Dm644 LICENSE-MIT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE-MIT"
+    install -Dm644 LICENSE-MIT "${pkgdir}/usr/share/licenses/oxidizr-arch/LICENSE-MIT"
   fi
 }
