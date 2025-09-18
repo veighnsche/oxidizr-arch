@@ -20,7 +20,7 @@ optdepends=(
 provides=('oxidizr-arch')
 conflicts=('oxidizr-arch-git')
 source=("${pkgname}-${pkgver}.tar.gz::https://github.com/veighnsche/oxidizr-arch/archive/refs/tags/v${pkgver}.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('8a47337bf880efc17e6c1f7f851ddbcce5aa0220f118c05cb2cc9327402b8fdf')
 
 prepare() {
   cd "${srcdir}/${pkgname}-${pkgver}" 2>/dev/null || cd "${srcdir}/${pkgname}-v${pkgver}"
