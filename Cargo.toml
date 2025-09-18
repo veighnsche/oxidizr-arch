@@ -1,6 +1,6 @@
 [package]
 name = "oxidizr-arch"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Arch Linux CLI to swap GNU coreutils/findutils with uutils and sudo with sudo-rs using Switchyard."
 license = "Apache-2.0 OR MIT"
