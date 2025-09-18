@@ -1,4 +1,4 @@
-# Maintainer: Your Name <you@example.com>
+# Maintainer: Vince Liem <vincepaul.liem@gmail.com>
 
 pkgname=oxidizr-arch
 pkgver=0.1.0
@@ -12,7 +12,7 @@ makedepends=('rust' 'cargo' 'help2man')
 optdepends=(
   'paru: AUR helper for installing AUR replacements (optional)'
   'sudo: Fallback for running AUR helper as non-root user'
-  'policycoreutils: Provides getenforce for SELinux detection (optional)'
+  'libselinux: Enables SELinux detection via getenforce (optional)'
   'bash-completion: Bash completion'
   'zsh: Zsh completion'
   'fish: Fish completion'
